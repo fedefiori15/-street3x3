@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STREET 3x3 — Marcador</title>
+<style>
+:root{--lime:#B6FF00;--black:#0B0B0B;--white:#FFFFFF;--gray:#1b1b1b}
+*{box-sizing:border-box} body{margin:0;background:var(--black);color:var(--white);font-family:Arial,Helvetica,sans-serif;min-height:100vh}
+.header{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 28px;border-bottom:2px solid var(--lime)}
+.brand{font-weight:1000;letter-spacing:2px;font-size:28px}.brand span{color:var(--lime)}
+.game{display:flex;align-items:center;justify-content:center;gap:clamp(20px,5vw,80px);min-height:54vh;padding:30px}
+.team{width:34%;text-align:center}.team-name{font-size:clamp(20px,3vw,42px);font-weight:900;text-transform:uppercase;min-height:50px}
+.score{font-size:clamp(100px,18vw,230px);line-height:.85;font-weight:1000;color:var(--lime);font-variant-numeric:tabular-nums}
+.fouls{font-size:20px;margin-top:20px}.foul-dot{display:inline-block;width:15px;height:15px;border:2px solid var(--white);margin:0 4px}.foul-dot.on{background:var(--lime);border-color:var(--lime)}
+.center{text-align:center;min-width:220px}.clock{font-size:clamp(55px,8vw,105px);font-weight:1000;font-variant-numeric:tabular-nums}.possession{margin-top:15px;font-size:25px;font-weight:900;color:var(--lime)}.period{font-size:16px;letter-spacing:2px;margin-top:12px}
+.controls{border-top:1px solid #333;padding:20px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center;background:#101010}
+button{background:#222;color:white;border:1px solid #444;padding:13px 18px;border-radius:8px;font-weight:800;cursor:pointer}button:hover{border-color:var(--lime);color:var(--lime)}
+.status{font-weight:900;letter-spacing:1px}
+.fullscreen{position:fixed;right:18px;bottom:18px;z-index:5;background:var(--lime);color:var(--black);border:0;padding:14px 18px;border-radius:9px;font-weight:1000}
+button.primary{background:var(--lime);color:var(--black);border-color:var(--lime)}button.danger{border-color:#777}
+.settings{padding:20px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center}.settings input{background:#171717;color:white;border:1px solid #444;padding:12px;border-radius:7px;width:180px}
+.panel-title{text-align:center;color:#aaa;font-size:12px;letter-spacing:2px;margin:10px}
+@media(max-width:700px){.game{gap:8px;padding:20px 8px}.team{width:31%}.center{min-width:110px}.score{font-size:90px}.team-name{font-size:18px}.clock{font-size:50px}}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="brand"><span>STREET</span> 3x3</div>
+  <div class="status" id="status">MARCADOR</div>
+</header>
+
+<main>
+<section class="game">
+  <div class="team">
+    <div class="team-name" id="homeName">LOCAL</div>
+    <div class="score" id="homeScore">0</div>
+    <div class="fouls">FALTAS <span id="homeFouls"></span></div>
+  </div>
+
+  <div class="center">
+    <div class="clock" id="clock">10:00</div>
+    <div class="period">PARTIDO STREET 3x3</div>
+  </div>
+
+  <div class="team">
+    <div class="team-name" id="awayName">VISITANTE</div>
+    <div class="score" id="awayScore">0</div>
+    <div class="fouls">FALTAS <span id="awayFouls"></span></div>
+  </div>
+</section>
+
+<section class="controls">
+  <button onclick="addScore('home',1)">LOCAL +1</button>
+  <button onclick="addScore('home',2)">LOCAL +2</button>
+  <button onclick="addScore('home',3)">LOCAL +3</button>
+  <button onclick="addScore('away',1)">VISITA +1</button>
+  <button onclick="addScore('away',2)">VISITA +2</button>
+  <button onclick="addScore('away',3)">VISITA +3</button>
+  <button onclick="changeFoul('home',1)">LOCAL FALTA +</button>
+  <button onclick="changeFoul('away',1)">VISITA FALTA +</button>
+  <button class="primary" onclick="toggleClock()" id="clockBtn">INICIAR RELOJ</button>
+  <button class="danger" onclick="newGame()">NUEVO PARTIDO</button>
+  <button onclick="document.documentElement.requestFullscreen?.()">PANTALLA COMPLETA</button>
+</section>
+
+<section class="settings">
+  <input id="homeInput" placeholder="Equipo local">
+  <input id="awayInput" placeholder="Equipo visitante">
+  <button onclick="setNames()">CAMBIAR EQUIPOS</button>
+</section>
+<div class="panel-title">STREET 3x3 · MARCADOR DIGITAL</div>
+<script>
+document.addEventListener('keydown', e => {
+  if (e.code === 'Space') { e.preventDefault(); toggleClock(); }
+  if (e.key === '1') addScore('home',1);
+  if (e.key === '2') addScore('home',2);
+  if (e.key === '3') addScore('home',3);
+  if (e.key === '4') addScore('away',1);
+  if (e.key === '5') addScore('away',2);
+  if (e.key === '6') addScore('away',3);
+});
+</script>
+</main>
+
+<script>
+let state={home:0,away:0,homeF:0,awayF:0,seconds:600,clock:false};
+let clockTimer=null;
+
+function render(){
+  homeScore.textContent=state.home; awayScore.textContent=state.away;
+  clock.textContent=`${String(Math.floor(state.seconds/60)).padStart(2,'0')}:${String(state.seconds%60).padStart(2,'0')}`;
+  homeFouls.innerHTML=foulDots(state.homeF); awayFouls.innerHTML=foulDots(state.awayF);
+  document.querySelector('.possession').firstChild.textContent='POSESIÓN ';
+}
+function foulDots(n){return Array.from({length:6},(_,i)=>`<i class="foul-dot ${i<n?'on':''}"></i>`).join('')}
+function addScore(t,n){state[t]+=n; render()}
+function changeFoul(t,n){state[t+'F']=Math.max(0,state[t+'F']+n);render()}
+function toggleClock(){
+ state.clock=!state.clock; clockBtn.textContent=state.clock?'PAUSAR RELOJ':'INICIAR RELOJ';
+ if(state.clock){clockTimer=setInterval(()=>{if(state.seconds>0){state.seconds--;render()}else{state.clock=false;clearInterval(clockTimer);clockBtn.textContent='INICIAR RELOJ';alert('FIN DEL PARTIDO')}} ,1000)}
+ else clearInterval(clockTimer)
+}
+function setNames(){homeName.textContent=(homeInput.value||'LOCAL').toUpperCase();awayName.textContent=(awayInput.value||'VISITANTE').toUpperCase()}
+function newGame(){if(!confirm('¿Reiniciar el partido?'))return;clearInterval(clockTimer);state={home:0,away:0,homeF:0,awayF:0,seconds:600,clock:false};clockBtn.textContent='INICIAR RELOJ';render()}
+render();
+</script>
+</body>
+</html>
