@@ -1,0 +1,28 @@
+<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>STREET 3x3 — Control</title>
+<style>:root{--l:#B6FF00;--b:#0B0B0B;--w:#fff}*{box-sizing:border-box}body{margin:0;background:var(--b);color:var(--w);font-family:Arial,sans-serif}header{padding:14px 22px;border-bottom:2px solid var(--l);display:flex;align-items:center;gap:14px;font-weight:1000;letter-spacing:2px}header img{width:64px;height:64px;object-fit:contain}main{max-width:1050px;margin:auto;padding:22px}.teams{display:grid;grid-template-columns:1fr 1fr;gap:16px}.card,.panel{background:#151515;border:1px solid #333;border-radius:14px;padding:18px;text-align:center}.name{font-size:25px;font-weight:900}.score{font-size:100px;color:var(--l);font-weight:1000;line-height:1}.row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:12px}button,input{font:inherit}button{background:#242424;color:#fff;border:1px solid #444;border-radius:9px;padding:12px 15px;font-weight:900;cursor:pointer}button:hover{border-color:var(--l);color:var(--l)}.primary{background:var(--l);color:#000;border-color:var(--l)}.clock{font-size:78px;font-weight:1000;font-variant-numeric:tabular-nums;margin:20px 0}.inputs{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-top:18px}input{background:#1c1c1c;color:#fff;border:1px solid #444;border-radius:8px;padding:12px;width:210px}.dot{display:inline-block;width:14px;height:14px;border:2px solid #fff;margin:2px}.on{background:var(--l);border-color:var(--l)}.status{color:#aaa;text-align:center;margin-top:14px}@media(max-width:700px){.teams{grid-template-columns:1fr}.score{font-size:82px}.clock{font-size:60px}}</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script><script>const firebaseConfig = {
+  apiKey: "AIzaSyA0IEk-UXbRP3ZxAKtj8xiQZIYQH3L2roI",
+  authDomain: "street-3x3.firebaseapp.com",
+  databaseURL: "https://street-3x3-default-rtdb.firebaseio.com",
+  projectId: "street-3x3",
+  storageBucket: "street-3x3.firebasestorage.app",
+  messagingSenderId: "829695563143",
+  appId: "1:829695563143:web:52424caaf4ade069592f22",
+  measurementId: "G-GYYX66VMFV"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const ref=db.ref("match");let state={home:0,away:0,homeF:0,awayF:0,homeName:"LOCAL",awayName:"VISITANTE",remaining:600,running:false,endAt:null};
+function dots(n){return Array.from({length:6},(_,i)=>`<i class="dot ${i<n?"on":""}"></i>`).join("")}
+function rem(){return state.running&&state.endAt?Math.max(0,Math.ceil((state.endAt-Date.now())/1000)):state.remaining}
+function draw(){hn.textContent=state.homeName;an.textContent=state.awayName;hs.textContent=state.home;as.textContent=state.away;hf.innerHTML=dots(state.homeF);af.innerHTML=dots(state.awayF);let t=rem();cl.textContent=`${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}`;cb.textContent=state.running?"PAUSAR RELOJ":"INICIAR RELOJ"}
+function save(x){ref.update(x)} function score(t,n){save({[t]:Math.max(0,state[t]+n)})} function foul(t,n){save({[t+"F"]:Math.max(0,Math.min(6,state[t+"F"]+n))})} function names(){save({homeName:(hi.value||"LOCAL").toUpperCase(),awayName:(ai.value||"VISITANTE").toUpperCase()})}
+function clockToggle(){let t=rem();if(state.running)save({remaining:t,running:false,endAt:null});else if(t>0)save({remaining:t,running:true,endAt:Date.now()+t*1000})}
+function resetGame(){if(!confirm("¿Reiniciar el partido?"))return;save({home:0,away:0,homeF:0,awayF:0,remaining:600,running:false,endAt:null})}
+ref.on("value",s=>{state=s.val()||state;draw()});setInterval(()=>{draw();if(state.running&&rem()===0)save({remaining:0,running:false,endAt:null})},250);
+</script></head><body><header><img src="../logo.png"><span>STREET 3x3 · CONTROL</span></header><main><div class="teams">
+<div class="card"><div class="name" id="hn">LOCAL</div><div class="score" id="hs">0</div><div>FALTAS <span id="hf"></span></div><div class="row"><button onclick="score('home',1)">+1</button><button onclick="score('home',2)">+2</button><button onclick="score('home',3)">+3</button></div><div class="row"><button onclick="foul('home',1)">FALTA +</button><button onclick="foul('home',-1)">FALTA −</button></div></div>
+<div class="card"><div class="name" id="an">VISITANTE</div><div class="score" id="as">0</div><div>FALTAS <span id="af"></span></div><div class="row"><button onclick="score('away',1)">+1</button><button onclick="score('away',2)">+2</button><button onclick="score('away',3)">+3</button></div><div class="row"><button onclick="foul('away',1)">FALTA +</button><button onclick="foul('away',-1)">FALTA −</button></div></div></div>
+<div class="panel" style="margin-top:16px"><div class="clock" id="cl">10:00</div><div class="row"><button class="primary" id="cb" onclick="clockToggle()">INICIAR RELOJ</button><button onclick="resetGame()">NUEVO PARTIDO</button></div></div>
+<div class="panel" style="margin-top:16px"><div class="inputs"><input id="hi" placeholder="Nombre local"><input id="ai" placeholder="Nombre visitante"><button onclick="names()">GUARDAR EQUIPOS</button></div></div><div class="status">Control en tiempo real · la transmisión se actualiza automáticamente.</div></main></body></html>
