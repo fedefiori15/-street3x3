@@ -4,15 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Street 3x3 — Torneo</title>
-<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js">
-/*
-  Los estados se revisan continuamente.
-  Firebase no necesita cambiar para que PRÓXIMO pase a EN JUEGO.
-*/
-setInterval(refreshTimeSensitiveContent,1000);
-refreshTimeSensitiveContent();
-
-</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 <style>
 :root{--lime:#B6FF00;--bg:#080A08;--card:#121512;--line:#303630;--muted:#9ba19b}
@@ -102,7 +94,6 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 <h1>TODO EL TORNEO.<br><span>EN UN SOLO LUGAR.</span></h1>
 <p>Resultados, posiciones, jugadores y estadísticas actualizadas en tiempo real.</p>
 <div class="muted" id="status">Conectando...</div>
-<div class="muted" id="clockStatus" style="margin-top:6px"></div>
 </div>
 
 <div class="card">
@@ -156,226 +147,293 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 <script>
 const config={apiKey:"AIzaSyDYfJ4qQSVqBWLBu5DziwtkWWXB4ycnSSw",authDomain:"street-3x3.firebaseapp.com",databaseURL:"https://street-3x3-default-rtdb.firebaseio.com",projectId:"street-3x3",storageBucket:"street-3x3.firebasestorage.app",messagingSenderId:"829695563143",appId:"1:829695563143:web:cccf22e2fe50f72d592f22",measurementId:"G-HYRY8Z1ZGF"};
 firebase.initializeApp(config);const ref=firebase.database().ref("tournament");let data={teams:{},matches:{},playoffs:{},participants:{}};
-const esc=x=>String(x??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");function name(id){
+const esc=x=>String(x??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");const name=id=>data.teams?.[id]?.name||"Por definir";
+function table(g){let a=Object.entries(data.teams||{}).filter(x=>x[1].group===g).map(x=>({id:x[0],name:x[1].name,pj:0,pg:0,pp:0,pf:0,pc:0,pts:0})),m={};a.forEach(x=>m[x.id]=x);Object.values(data.matches||{}).forEach(x=>{if(x.group!==g||x.homeScore==null||x.awayScore==null)return;let h=m[x.home],v=m[x.away];if(!h||!v)return;h.pj++;v.pj++;h.pf+=+x.homeScore;h.pc+=+x.awayScore;v.pf+=+x.awayScore;v.pc+=+x.homeScore;if(+x.homeScore>+x.awayScore){h.pg++;v.pp++;h.pts+=2;v.pts++}else if(+x.homeScore<+x.awayScore){v.pg++;h.pp++;v.pts+=2;h.pts++}});return a.sort((x,y)=>y.pg-x.pg||((y.pf-y.pc)-(x.pf-x.pc))||y.pf-x.pf)}
+function renderFixture(){let b=document.getElementById("fixtureContent"),arr=Object.entries(data.matches||{});if(!arr.length){b.innerHTML='<div class="empty">El fixture todavía no fue generado.</div>';return}let h="";["A","B","C","D"].forEach(g=>{let q=arr.filter(x=>x[1].group===g);if(!q.length)return;h+=`<div class="group"><h3>GRUPO ${g}</h3><div class="cards">`;q.forEach(x=>{let m=x[1];h+=`<div class="match"><div class="meta"><span>GRUPO ${g}</span><span>${esc(m.court||"Cancha por definir")}</span></div><div class="row"><span>${esc(name(m.home))}</span><span class="score">${m.homeScore==null?"—":m.homeScore}</span></div><div class="row"><span>${esc(name(m.away))}</span><span class="score">${m.awayScore==null?"—":m.awayScore}</span></div><div class="muted">${esc(m.time||"Hora por definir")}</div></div>`});h+="</div></div>"});b.innerHTML=h}
+function renderResults(){let b=document.getElementById("resultsContent"),a=Object.entries(data.matches||{}).filter(x=>x[1].homeScore!=null&&x[1].awayScore!=null);if(!a.length){b.innerHTML='<div class="empty">Todavía no hay resultados cargados.</div>';return}let h='<div class="cards">';a.forEach(x=>{let m=x[1];h+=`<div class="match"><div class="meta"><span>GRUPO ${m.group}</span><span>${esc(m.court||"")}</span></div><div class="row"><span>${esc(name(m.home))}</span><span class="score">${m.homeScore}</span></div><div class="row"><span>${esc(name(m.away))}</span><span class="score">${m.awayScore}</span></div><div class="muted">${esc(m.time||"Finalizado")}</div></div>`});b.innerHTML=h+"</div>"}
+function renderTables(){let b=document.getElementById("tablesContent"),h="";["A","B","C","D"].forEach(g=>{h+=`<div class="group"><h3>GRUPO ${g}</h3><div class="tableWrap"><table class="table"><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PP</th><th>PF</th><th>PC</th><th>DIF</th><th>PTS</th></tr>`;table(g).forEach((t,i)=>h+=`<tr><td class="pos">${i+1}</td><td>${esc(t.name)}</td><td>${t.pj}</td><td>${t.pg}</td><td>${t.pp}</td><td>${t.pf}</td><td>${t.pc}</td><td>${t.pf-t.pc}</td><td class="pos">${t.pts}</td></tr>`);h+="</table></div></div>"});b.innerHTML=h}
+function game(m,l){return m?`<div class="game"><div class="muted">${l}</div><div><b>${esc(name(m.home))}</b> <span style="float:right;color:var(--lime)">${m.homeScore??""}</span></div><div>${esc(name(m.away))} <span style="float:right;color:var(--lime)">${m.awayScore??""}</span></div></div>`:`<div class="game">${l}<br>Por definir</div>`}
+function renderPlayoffs(){
 
-if(id===undefined||id===null||id==="")return "Por definir";
+const b=document.getElementById("playoffContent");
+const p=data.playoffs||{};
 
-if(typeof id==="object"){
+if(!Object.keys(p).length){
+b.innerHTML='<div class="empty">Los playoffs todavía no fueron generados.</div>';
+return;
+}
 
-if(id.name)return String(id.name);
-if(id.teamName)return String(id.teamName);
-if(id.team)return name(id.team);
-if(id.id)return name(id.id);
+function winner(m){
 
-return "Por definir";
+if(!m||m.homeScore==null||m.awayScore==null)return null;
+
+if(Number(m.homeScore)>Number(m.awayScore))return m.home;
+if(Number(m.awayScore)>Number(m.homeScore))return m.away;
+
+return null;
 
 }
 
-const key=String(id);
+const qf1Winner=winner(p.qf1);
+const qf2Winner=winner(p.qf2);
+const qf3Winner=winner(p.qf3);
+const qf4Winner=winner(p.qf4);
 
-if(data.teams?.[key]?.name){
-return String(data.teams[key].name);
+const sf1=p.sf1||{home:qf1Winner,away:qf3Winner,homeScore:null,awayScore:null};
+const sf2=p.sf2||{home:qf2Winner,away:qf4Winner,homeScore:null,awayScore:null};
+
+const sf1Winner=winner(sf1);
+const sf2Winner=winner(sf2);
+
+const final=p.final||{home:sf1Winner,away:sf2Winner,homeScore:null,awayScore:null};
+const champion=winner(final)||p.champion||null;
+
+function playoffTeam(id){
+
+return id?esc(name(id)):"Por definir";
+
 }
 
-const found=Object.entries(data.teams||{}).find(([teamId,team])=>{
+function playoffMatch(m,label){
 
-return String(teamId)===key ||
-String(team?.name||"").toLowerCase()===key.toLowerCase();
+if(!m)return`<div class="game">${label}<br>Por definir</div>`;
+
+return`
+<div class="game">
+<div class="muted">${label}</div>
+<div><b>${playoffTeam(m.home)}</b> <span style="float:right;color:var(--lime)">${m.homeScore??""}</span></div>
+<div>${playoffTeam(m.away)} <span style="float:right;color:var(--lime)">${m.awayScore??""}</span></div>
+</div>
+`;
+
+}
+
+b.innerHTML=`
+<div class="bracket">
+<div class="round">
+<h3>CUARTOS</h3>
+${playoffMatch(p.qf1,"QF1")}
+${playoffMatch(p.qf2,"QF2")}
+${playoffMatch(p.qf3,"QF3")}
+${playoffMatch(p.qf4,"QF4")}
+</div>
+
+<div class="round">
+<h3>SEMIFINALES</h3>
+${playoffMatch(sf1,"SF1")}
+${playoffMatch(sf2,"SF2")}
+</div>
+
+<div class="round">
+<h3>FINAL</h3>
+${playoffMatch(final,"FINAL")}
+</div>
+
+<div class="round champ">
+<h3>CAMPEÓN</h3>
+<div class="game" style="text-align:center;font-size:20px">
+🏆<br><br>
+${champion?`<b>${playoffTeam(champion)}</b>`:"POR DEFINIR"}
+</div>
+</div>
+</div>
+`;
+
+}
+
+function renderPlayers(){
+
+const b=document.getElementById("playersContent");
+if(!b)return;
+
+const players=Object.entries(data.participants||{});
+
+if(!players.length){
+b.innerHTML='<div class="empty">Todavía no hay jugadores cargados.</div>';
+return;
+}
+
+const groups=["A","B","C","D"];
+let h="";
+
+groups.forEach(group=>{
+
+const groupPlayers=players
+.filter(([id,p])=>data.teams?.[p.team]?.group===group)
+.sort((a,z)=>String(a[1].name||"").localeCompare(String(z[1].name||"")));
+
+if(!groupPlayers.length)return;
+
+h+=`<div class="group"><h3>GRUPO ${group}</h3><div class="cards">`;
+
+groupPlayers.forEach(([id,p])=>{
+
+const team=data.teams?.[p.team];
+
+h+=`
+<div class="match playerCard" onclick="openPlayerModal('${id}')">
+<div class="meta">
+<span>JUGADOR</span>
+<span>${p.number!==undefined&&p.number!==""?"#"+esc(p.number):""}</span>
+</div>
+<div style="font-size:20px;font-weight:900;margin-bottom:7px">${esc(p.name)}</div>
+<div class="muted">${team?esc(team.name):"Equipo por definir"}</div>
+<div style="margin-top:12px"><span class="badge">VER PROMEDIOS</span></div>
+</div>
+`;
 
 });
 
-if(found?.[1]?.name)return String(found[1].name);
+h+="</div></div>";
 
-if(key==="undefined"||key==="null")return "Por definir";
+});
 
-return key;
-
-}
-
-function matchTeamName(match,side){
-
-const isHome=side==="home";
-
-const candidates=isHome
-?[
-match?.home,
-match?.homeId,
-match?.homeTeamId,
-match?.home_team_id,
-match?.team1,
-match?.team1Id,
-match?.teamA,
-match?.teamAId,
-match?.local,
-match?.localId
-]
-:[
-match?.away,
-match?.awayId,
-match?.awayTeamId,
-match?.away_team_id,
-match?.team2,
-match?.team2Id,
-match?.teamB,
-match?.teamBId,
-match?.visitante,
-match?.visitanteId
-];
-
-const explicit=isHome
-?[
-match?.homeName,
-match?.homeTeam,
-match?.home_team,
-match?.localName
-]
-:[
-match?.awayName,
-match?.awayTeam,
-match?.away_team,
-match?.awayName
-];
-
-for(const value of [...candidates,...explicit]){
-
-if(value===undefined||value===null||value==="")continue;
-
-const resolved=name(value);
-
-if(resolved!=="Por definir" &&
-resolved!=="undefined" &&
-resolved!=="null"){
-
-return resolved;
+b.innerHTML=h;
 
 }
 
-}
+function openPlayerModal(id){
 
-return "Por definir";
+const p=data.participants?.[id];
+if(!p)return;
 
-}
+const team=data.teams?.[p.team];
+const games=Number(p.games)||0;
+const points=Number(p.points)||0;
+const rebounds=Number(p.rebounds)||0;
+const assists=Number(p.assists)||0;
 
-function formatMatchDate(date){
+const ppg=games?(points/games).toFixed(1):"0.0";
+const rpg=games?(rebounds/games).toFixed(1):"0.0";
+const apg=games?(assists/games).toFixed(1):"0.0";
 
-if(!date)return "Fecha por definir";
+document.getElementById("playerModalContent").innerHTML=`
+<div class="kicker">JUGADOR</div>
+<h2 style="font-size:32px;margin:8px 0">${p.number!==undefined&&p.number!==""?"#"+esc(p.number)+" ":""}${esc(p.name)}</h2>
+<p class="muted" style="font-size:15px">${team?esc(team.name):"Equipo por definir"}</p>
 
-const raw=String(date).trim();
+<h3 style="margin-top:28px">PROMEDIOS</h3>
 
-const iso=raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+<div class="avgGrid">
+<div class="avgBox"><span>PPG</span><b>${ppg}</b><span class="muted">Puntos</span></div>
+<div class="avgBox"><span>RPG</span><b>${rpg}</b><span class="muted">Rebotes</span></div>
+<div class="avgBox"><span>APG</span><b>${apg}</b><span class="muted">Asistencias</span></div>
+</div>
+`;
 
-if(iso){
-
-return String(iso[3]).padStart(2,"0")+"/"+
-String(iso[2]).padStart(2,"0")+"/"+
-iso[1];
-
-}
-
-const us=raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-
-if(us){
-
-/* Si Firebase ya guarda MM/DD/YYYY, convertir a DD/MM/YYYY. */
-return String(us[2]).padStart(2,"0")+"/"+
-String(us[1]).padStart(2,"0")+"/"+
-us[3];
-
-}
-
-return raw;
+document.getElementById("playerModal").classList.remove("hidden");
 
 }
 
-function getMatchDateTime(m){
+function closePlayerModal(event){
 
-if(!m?.date || !m?.time)return null;
+if(event && event.target!==document.getElementById("playerModal"))return;
 
-const cleanTime=String(m.time).trim().replace(".",":");
+document.getElementById("playerModal").classList.add("hidden");
 
-const tm=cleanTime.match(/^(\d{1,2}):(\d{2})$/);
+}
 
-if(!tm)return null;
+let activeRanking="points";
 
-const hh=Number(tm[1]);
-const mm=Number(tm[2]);
+function renderStats(){
 
-if(hh<0||hh>23||mm<0||mm>59)return null;
+const b=document.getElementById("statsContent");
+if(!b)return;
 
-let year,month,day;
+const players=Object.entries(data.participants||{});
 
-const rawDate=String(m.date).trim();
+if(!players.length){
+b.innerHTML='<div class="empty">Todavía no hay estadísticas cargadas.</div>';
+return;
+}
 
-let match=rawDate.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+const labels={
+points:["PUNTOS","PTS","MÁXIMO ANOTADOR"],
+rebounds:["REBOTES","REB","MÁXIMO REBOTERO"],
+assists:["ASISTENCIAS","AST","MÁXIMO ASISTENTE"],
+motm:["MVP","MVP","MÁS MVP"]
+};
 
-if(match){
+let h=`
+<div class="tabs" style="margin-bottom:18px">
+<button class="nav ${activeRanking==="points"?"active":""}" onclick="setRanking('points')">PUNTOS</button>
+<button class="nav ${activeRanking==="rebounds"?"active":""}" onclick="setRanking('rebounds')">REBOTES</button>
+<button class="nav ${activeRanking==="assists"?"active":""}" onclick="setRanking('assists')">ASISTENCIAS</button>
+<button class="nav ${activeRanking==="motm"?"active":""}" onclick="setRanking('motm')">MVP</button>
+</div>
+`;
 
-year=Number(match[1]);
-month=Number(match[2]);
-day=Number(match[3]);
+const list=[...players]
+.sort((a,z)=>(Number(z[1][activeRanking])||0)-(Number(a[1][activeRanking])||0))
+.slice(0,15);
+
+const meta=labels[activeRanking];
+
+h+=`
+<div class="group">
+<h3>TOP 15 — ${meta[0]}</h3>
+<div class="tableWrap">
+<table class="table">
+<tr><th>#</th><th>Jugador</th><th>Equipo</th><th>${meta[1]}</th></tr>
+`;
+
+if(!list.length){
+
+h+='<tr><td colspan="4" class="muted">Todavía no hay datos.</td></tr>';
 
 }else{
 
-match=rawDate.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+list.forEach(([id,p],i)=>{
 
-if(!match)return null;
+const team=data.teams?.[p.team];
+const extra=i===0?`<div class="muted" style="margin-top:4px">🥇 ${meta[2]}</div>`:"";
 
-/* Firebase legado: MM/DD/YYYY */
-month=Number(match[1]);
-day=Number(match[2]);
-year=Number(match[3]);
+h+=`
+<tr>
+<td class="pos">${i+1}</td>
+<td>${esc(p.name)}${extra}</td>
+<td>${team?esc(team.name):"Por definir"}</td>
+<td class="pos">${Number(p[activeRanking])||0}</td>
+</tr>
+`;
 
-}
-
-const iso=
-year+"-"+String(month).padStart(2,"0")+"-"+String(day).padStart(2,"0")+
-"T"+String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0")+":00-03:00";
-
-const d=new Date(iso);
-
-return Number.isNaN(d.getTime())?null:d;
+});
 
 }
 
-function isScoreSet(value){
+h+="</table></div></div>";
 
-return value!==null &&
-value!==undefined &&
-value!=="" &&
-Number.isFinite(Number(value));
+b.innerHTML=h;
 
 }
 
-function isMatchFinished(m){
+function setRanking(metric){
 
-if(!m)return false;
-
-/*
-  Un partido se considera terminado solamente cuando:
-  - tiene ambos marcadores cargados, y
-  - no está explícitamente marcado como Programado.
-  Los partidos generados por el Admin nacen como Programado.
-*/
-const bothScores=isScoreSet(m.homeScore)&&isScoreSet(m.awayScore);
-
-if(!bothScores)return false;
-
-if(String(m.status||"").toLowerCase()==="programado")return false;
-
-return true;
+activeRanking=metric;
+renderStats();
 
 }
 
-function isMatchPending(m){
 
-return !isMatchFinished(m);
+function getMatchDateTime(m){
+
+if(!m.date || !m.time)return null;
+
+const parts=m.time.split(":");
+const hh=Number(parts[0]);
+const mm=Number(parts[1]||0);
+
+if(Number.isNaN(hh)||Number.isNaN(mm))return null;
+
+const d=new Date(m.date+"T"+String(hh).padStart(2,"0")+":"+String(mm).padStart(2,"0")+":00");
+
+return isNaN(d.getTime())?null:d;
 
 }
-
 
 function matchStatus(m){
 
-if(isMatchFinished(m)){
+if(m.homeScore!==null && m.awayScore!==null){
 return {key:"final",label:"FINALIZADO"};
 }
 
@@ -385,7 +443,7 @@ if(!dt){
 return {key:"upcoming",label:"PRÓXIMO"};
 }
 
-return new Date().getTime() >= dt.getTime()
+return new Date()>=dt
 ?{key:"live",label:"EN JUEGO"}
 :{key:"upcoming",label:"PRÓXIMO"};
 
@@ -394,22 +452,9 @@ return new Date().getTime() >= dt.getTime()
 function statusBadge(m){
 
 const s=matchStatus(m);
+const cls=s.key==="live"?"statusLive":s.key==="final"?"statusFinal":"statusUpcoming";
 
-const cls=
-s.key==="live"
-?"statusLive"
-:s.key==="final"
-?"statusFinal"
-:"statusUpcoming";
-
-const icon=
-s.key==="live"
-?"🟡 "
-:s.key==="final"
-?"🟢 "
-:"⚪ ";
-
-return `<span class="statusBadge ${cls}">${icon}${s.label}</span>`;
+return `<span class="statusBadge ${cls}">${s.key==="live"?"🟡 ":""}${s.label}</span>`;
 
 }
 
@@ -448,84 +493,37 @@ function renderNextMatches(){
 const b=document.getElementById("nextMatchesContent");
 if(!b)return;
 
-const pending=Object.values(data.matches||{})
-.filter(m=>isMatchPending(m));
-
-const live=pending
-.filter(m=>{
-const dt=getMatchDateTime(m);
-return dt && new Date().getTime()>=dt.getTime();
-})
-.sort((a,z)=>(getMatchDateTime(a)||new Date(8640000000000000))-(getMatchDateTime(z)||new Date(8640000000000000)));
-
-const upcoming=pending
-.filter(m=>{
-const dt=getMatchDateTime(m);
-return !dt || new Date().getTime()<dt.getTime();
-})
+const matches=Object.values(data.matches||{})
+.filter(m=>m.homeScore===null||m.awayScore===null)
 .sort((a,z)=>{
-const da=getMatchDateTime(a),dz=getMatchDateTime(z);
+
+const da=getMatchDateTime(a), dz=getMatchDateTime(z);
+
 if(!da&&!dz)return 0;
 if(!da)return 1;
 if(!dz)return -1;
+
 return da-dz;
+
 })
 .slice(0,3);
 
-if(!live.length&&!upcoming.length){
+if(!matches.length){
 b.innerHTML="";
 return;
 }
 
-let h="";
-
-if(live.length){
-
-h+=`
+let h=`
 <div class="homeBlock">
-<div class="homeTitle">
-<h3>🟡 EN JUEGO AHORA</h3>
-<span>EN VIVO</span>
-</div>
-`;
-
-live.forEach(m=>{
-
-h+=`
-<div class="homeMatch">
-<div class="meta">
-<span>GRUPO ${esc(m.group||"")}</span>
-${statusBadge(m)}
-</div>
-<div class="teams">
-<span>${esc(matchTeamName(m,"home"))}</span>
-<span>VS</span>
-<span>${esc(matchTeamName(m,"away"))}</span>
-</div>
-<div class="muted" style="margin-top:9px">
-${esc(formatMatchDate(m.date))} · ${esc(m.time||"Hora por definir")}
-${m.court?" · "+esc(m.court):""}
-</div>
-</div>
-`;
-
-});
-
-h+="</div>";
-
-}
-
-if(upcoming.length){
-
-h+=`
-<div class="homeBlock" style="margin-top:18px">
 <div class="homeTitle">
 <h3>🏀 PRÓXIMOS PARTIDOS</h3>
 <span>AGENDA</span>
 </div>
 `;
 
-upcoming.forEach(m=>{
+matches.forEach(m=>{
+
+const s=matchStatus(m);
 
 h+=`
 <div class="homeMatch">
@@ -534,12 +532,12 @@ h+=`
 ${statusBadge(m)}
 </div>
 <div class="teams">
-<span>${esc(matchTeamName(m,"home"))}</span>
+<span>${esc(name(m.home))}</span>
 <span>VS</span>
-<span>${esc(matchTeamName(m,"away"))}</span>
+<span>${esc(name(m.away))}</span>
 </div>
 <div class="muted" style="margin-top:9px">
-${esc(formatMatchDate(m.date))} · ${esc(m.time||"Hora por definir")}
+${esc(m.date||"Fecha por definir")} · ${esc(m.time||"Hora por definir")}
 ${m.court?" · "+esc(m.court):""}
 </div>
 </div>
@@ -549,12 +547,9 @@ ${m.court?" · "+esc(m.court):""}
 
 h+=`<a class="dashboardLink" href="#" onclick="goToTab('fixture');return false">VER FIXTURE →</a></div>`;
 
-}
-
 b.innerHTML=h;
 
 }
-
 
 function renderRecentResults(){
 
@@ -562,7 +557,7 @@ const b=document.getElementById("recentResultsContent");
 if(!b)return;
 
 const results=Object.entries(data.matches||{})
-.filter(([id,m])=>isMatchFinished(m))
+.filter(([id,m])=>m.homeScore!==null&&m.awayScore!==null)
 .sort((a,z)=>{
 
 const da=getMatchDateTime(a[1]), dz=getMatchDateTime(z[1]);
@@ -596,12 +591,12 @@ h+=`
 ${statusBadge(m)}
 </div>
 <div class="teams">
-<span>${esc(matchTeamName(m,"home"))}</span>
-<span class="score">${isScoreSet(m.homeScore)?Number(m.homeScore):"—"} - ${isScoreSet(m.awayScore)?Number(m.awayScore):"—"}</span>
-<span>${esc(matchTeamName(m,"away"))}</span>
+<span>${esc(name(m.home))}</span>
+<span class="score">${m.homeScore} - ${m.awayScore}</span>
+<span>${esc(name(m.away))}</span>
 </div>
 <div class="muted" style="margin-top:9px">
-${esc(formatMatchDate(m.date))} ${esc(m.time||"")}
+${esc(m.date||"")} ${esc(m.time||"")}
 </div>
 </div>
 `;
@@ -745,32 +740,7 @@ window.scrollTo({top:0,behavior:"smooth"});
 
 }
 
-
-function refreshTimeSensitiveContent(){
-
-renderNextMatches();
-renderRecentResults();
-
-const now=new Date();
-
-const clock=document.getElementById("clockStatus");
-
-if(clock){
-
-const argentinaTime=now.toLocaleTimeString("es-AR",{
-timeZone:"America/Argentina/Buenos_Aires",
-hour:"2-digit",
-minute:"2-digit",
-second:"2-digit"
-});
-
-clock.textContent="Hora oficial Argentina: "+argentinaTime;
-
-}
-
-}
-
-function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs();renderHomePlayerOfRound();renderNextMatches();renderRecentResults();renderGroupLeaders();renderTopStats();refreshTimeSensitiveContent()}
+function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs();renderHomePlayerOfRound();renderNextMatches();renderRecentResults();renderGroupLeaders();renderTopStats()}
 ref.on("value",s=>{let v=s.val();data=v&&typeof v==="object"&&!Array.isArray(v)?v:{teams:{},matches:{},playoffs:{}};data.teams=data.teams&&typeof data.teams==="object"?data.teams:{};data.matches=data.matches&&typeof data.matches==="object"?data.matches:{};data.playoffs=data.playoffs&&typeof data.playoffs==="object"?data.playoffs:{};
 data.participants=data.participants&&typeof data.participants==="object"?data.participants:{};
 data.playerOfRound=typeof data.playerOfRound==="string"?data.playerOfRound:"";
