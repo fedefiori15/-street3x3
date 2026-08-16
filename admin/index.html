@@ -892,52 +892,6 @@ save();
 renderParticipants();
 
 }
-function updateParticipantStats(id){
-
-ensureParticipants();
-
-const p=data.participants[id];
-
-if(!p)return;
-
-const points=prompt(
-"Puntos de "+p.name,
-p.points||0
-);
-
-if(points===null)return;
-
-const rebounds=prompt(
-"Rebotes de "+p.name,
-p.rebounds||0
-);
-
-if(rebounds===null)return;
-
-const assists=prompt(
-"Asistencias de "+p.name,
-p.assists||0
-);
-
-if(assists===null)return;
-
-const motm=prompt(
-"MOTM de "+p.name,
-p.motm||0
-);
-
-if(motm===null)return;
-
-p.points=Number(points)||0;
-p.rebounds=Number(rebounds)||0;
-p.assists=Number(assists)||0;
-p.motm=Number(motm)||0;
-
-save();
-
-renderParticipants();
-
-}
 
 /* FIXTURE */
 
@@ -991,7 +945,6 @@ save();
 alert("Fixture generado correctamente.");
 
 }
-
 
 /* FIXTURE VIEW */
 
