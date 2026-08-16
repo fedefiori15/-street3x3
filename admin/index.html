@@ -638,7 +638,188 @@ container.appendChild(div);
 });
 
 }
+  
+/* PARTICIPANTES */
 
+function ensureParticipants(){
+
+if(!data.participants){
+data.participants={};
+}
+
+}
+
+
+function addParticipant(){
+
+ensureParticipants();
+
+const name=document.getElementById("participantName").value.trim();
+const team=document.getElementById("participantTeam").value;
+const number=document.getElementById("participantNumber").value.trim();
+
+if(!name){
+alert("Ingresá el nombre del participante.");
+return;
+}
+
+if(!team){
+alert("Seleccioná un equipo.");
+return;
+}
+
+const id="player_"+Date.now();
+
+data.participants[id]={
+
+name:name,
+team:team,
+number:number,
+
+points:0,
+rebounds:0,
+assists:0,
+motm:0
+
+};
+
+save();
+
+document.getElementById("participantName").value="";
+document.getElementById("participantNumber").value="";
+
+renderParticipants();
+
+}
+
+
+function deleteParticipant(id){
+
+if(!confirm("¿Eliminar este participante?")) return;
+
+ensureParticipants();
+
+delete data.participants[id];
+
+save();
+
+renderParticipants();
+
+}
+
+
+function renderParticipants(){
+
+ensureParticipants();
+
+const container=document.getElementById("participantList");
+
+if(!container)return;
+
+container.innerHTML="";
+
+const participants=Object.entries(data.participants);
+
+if(!participants.length){
+
+container.innerHTML="<p>No hay participantes cargados.</p>";
+
+return;
+
+}
+
+participants.forEach(([id,p])=>{
+
+const team=data.teams[p.team];
+
+const div=document.createElement("div");
+
+div.className="team";
+
+div.innerHTML=`
+
+<strong>${escapeHtml(p.name)}</strong>
+
+<small>
+${team ? escapeHtml(team.name) : "Equipo no encontrado"}
+${p.number ? " · #"+escapeHtml(p.number) : ""}
+</small>
+
+<br><br>
+
+<div>
+PTS: ${p.points||0}
+&nbsp; | &nbsp;
+REB: ${p.rebounds||0}
+&nbsp; | &nbsp;
+AST: ${p.assists||0}
+&nbsp; | &nbsp;
+MOTM: ${p.motm||0}
+</div>
+
+<br>
+
+<button
+class="danger"
+onclick="deleteParticipant('${id}')">
+ELIMINAR
+</button>
+
+`;
+
+container.appendChild(div);
+
+});
+
+}
+
+
+function updateParticipantStats(id){
+
+ensureParticipants();
+
+const p=data.participants[id];
+
+if(!p)return;
+
+const points=prompt(
+"Puntos de "+p.name,
+p.points||0
+);
+
+if(points===null)return;
+
+const rebounds=prompt(
+"Rebotes de "+p.name,
+p.rebounds||0
+);
+
+if(rebounds===null)return;
+
+const assists=prompt(
+"Asistencias de "+p.name,
+p.assists||0
+);
+
+if(assists===null)return;
+
+const motm=prompt(
+"MOTM de "+p.name,
+p.motm||0
+);
+
+if(motm===null)return;
+
+p.points=Number(points)||0;
+p.rebounds=Number(rebounds)||0;
+p.assists=Number(assists)||0;
+p.motm=Number(motm)||0;
+
+save();
+
+renderParticipants();
+
+}
 
 /* FIXTURE */
 
