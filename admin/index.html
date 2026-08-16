@@ -759,11 +759,6 @@ save();
 document.getElementById("participantName").value="";
 document.getElementById("participantNumber").value="";
 
-renderParticipants();
-
-}
-
-
 function deleteParticipant(id){
 
 if(!confirm("¿Eliminar este participante?")) return;
@@ -831,6 +826,12 @@ MOTM: ${p.motm||0}
 <br>
 
 <button
+class="primary"
+onclick="editParticipantStats('${id}')">
+EDITAR ESTADÍSTICAS
+</button>
+
+<button
 class="danger"
 onclick="deleteParticipant('${id}')">
 ELIMINAR
@@ -845,6 +846,52 @@ container.appendChild(div);
 }
 
 
+function editParticipantStats(id){
+
+ensureParticipants();
+
+const p=data.participants[id];
+
+if(!p)return;
+
+const points=prompt(
+"Puntos de "+p.name,
+p.points||0
+);
+
+if(points===null)return;
+
+const rebounds=prompt(
+"Rebotes de "+p.name,
+p.rebounds||0
+);
+
+if(rebounds===null)return;
+
+const assists=prompt(
+"Asistencias de "+p.name,
+p.assists||0
+);
+
+if(assists===null)return;
+
+const motm=prompt(
+"MOTM de "+p.name,
+p.motm||0
+);
+
+if(motm===null)return;
+
+p.points=Math.max(0,Number(points)||0);
+p.rebounds=Math.max(0,Number(rebounds)||0);
+p.assists=Math.max(0,Number(assists)||0);
+p.motm=Math.max(0,Number(motm)||0);
+
+save();
+
+renderParticipants();
+
+}
 function updateParticipantStats(id){
 
 ensureParticipants();
