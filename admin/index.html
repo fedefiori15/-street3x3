@@ -677,7 +677,26 @@ container.appendChild(div);
 });
 
 }
-  
+  function updateParticipantTeams(){
+
+const select=document.getElementById("participantTeam");
+
+if(!select)return;
+
+select.innerHTML='<option value="">Seleccionar equipo</option>';
+
+Object.entries(data.teams || {}).forEach(([id,team])=>{
+
+const option=document.createElement("option");
+
+option.value=id;
+option.textContent=team.name+" — Grupo "+team.group;
+
+select.appendChild(option);
+
+});
+
+}
 /* PARTICIPANTES */
 
 function ensureParticipants(){
