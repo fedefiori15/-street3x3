@@ -1291,15 +1291,21 @@ id="${id}_court"
 placeholder="Cancha"
 value="${m.court||""}">
 
+<label style="display:flex;flex-direction:column;gap:5px">
+<small style="color:#aaa">Fecha</small>
 <input
 id="${id}_date"
 type="date"
 value="${m.date||""}">
+</label>
 
+<label style="display:flex;flex-direction:column;gap:5px">
+<small style="color:#aaa">Hora</small>
 <input
 id="${id}_time"
-placeholder="Hora"
+type="time"
 value="${m.time||""}">
+</label>
 
 <button class="primary"
 onclick="saveResult('${id}')">
