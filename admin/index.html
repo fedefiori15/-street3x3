@@ -513,13 +513,21 @@ tournamentRef.on("value",snap=>{
 
 const value=snap.val();
 
-if(value){
+if(value && typeof value === "object" && !Array.isArray(value)){
 
 data=value;
 
-if(!data.teams) data.teams={};
-if(!data.matches) data.matches={};
-if(!data.playoffs) data.playoffs={};
+if(!data.teams || typeof data.teams !== "object"){
+data.teams={};
+}
+
+if(!data.matches || typeof data.matches !== "object"){
+data.matches={};
+}
+
+if(!data.playoffs || typeof data.playoffs !== "object"){
+data.playoffs={};
+}
 
 }else{
 
