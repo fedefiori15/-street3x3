@@ -876,7 +876,7 @@ Object.values(data.matches||{}).forEach(m=>{
 
 if(m.group!==group)return;
 
-if(m.homeScore===null||m.awayScore===null)return;
+if(m.homeScore == null || m.awayScore == null)return;
 
 const h=map[m.home];
 const a=map[m.away];
