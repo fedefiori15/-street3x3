@@ -512,7 +512,8 @@ const tournamentRef=db.ref("tournament");
 let data={
 teams:{},
 matches:{},
-playoffs:{}
+playoffs:{},
+participants:{}
 };
 
 
@@ -578,6 +579,10 @@ if(!data.playoffs || typeof data.playoffs !== "object"){
 data.playoffs={};
 }
 
+if(!data.participants || typeof data.participants !== "object"){
+data.participants={};
+}
+
 }else{
 
 data={
@@ -590,6 +595,7 @@ playoffs:{}
 
 renderTeams();
 updateParticipantTeams();
+renderParticipants();
 renderFixture();
 renderResults();
 renderTables();
@@ -758,6 +764,10 @@ save();
 
 document.getElementById("participantName").value="";
 document.getElementById("participantNumber").value="";
+
+renderParticipants();
+
+}
 
 function deleteParticipant(id){
 
