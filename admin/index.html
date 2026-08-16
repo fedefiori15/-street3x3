@@ -311,6 +311,10 @@ PARTICIPANTES
 ESTADÍSTICAS
 </button>
 
+  <button class="tab" onclick="showTab('jornada',this)">
+JORNADA
+</button>
+
   <button class="tab" onclick="showTab('fixture',this)">
 FIXTURE
 </button>
@@ -423,6 +427,36 @@ Cargá las estadísticas acumuladas de cada jugador. Los datos se reflejan autom
 </p>
 
 <div id="statsList"></div>
+
+</div>
+
+</section>
+
+<!-- JORNADA -->
+
+<section id="jornada" class="section">
+
+<div class="panel">
+
+<h2>Jugador de la fecha</h2>
+
+<p>
+Elegí el jugador destacado de la jornada. Se mostrará automáticamente en la página pública.
+</p>
+
+<div class="team-form">
+
+<select id="playerOfRound">
+<option value="">Seleccionar jugador</option>
+</select>
+
+<button class="primary" onclick="savePlayerOfRound()">
+GUARDAR JUGADOR DE LA FECHA
+</button>
+
+</div>
+
+<div id="currentPlayerOfRound"></div>
 
 </div>
 
@@ -621,6 +655,7 @@ renderTeams();
 updateParticipantTeams();
 renderParticipants();
 renderStats();
+updatePlayerOfRoundSelect();
 renderFixture();
 renderResults();
 renderTables();
@@ -1014,6 +1049,83 @@ container.innerHTML=html;
 
 }
 
+
+/* JORNADA */
+
+function updatePlayerOfRoundSelect(){
+
+const select=document.getElementById("playerOfRound");
+if(!select)return;
+
+const current=data.playerOfRound||"";
+
+select.innerHTML='<option value="">Seleccionar jugador</option>';
+
+Object.entries(data.participants||{})
+.sort((a,b)=>String(a[1].name||"").localeCompare(String(b[1].name||"")))
+.forEach(([id,p])=>{
+
+const option=document.createElement("option");
+option.value=id;
+option.textContent=p.name+(p.number!==undefined&&p.number!==""?" #"+p.number:"");
+if(id===current)option.selected=true;
+
+select.appendChild(option);
+
+});
+
+renderCurrentPlayerOfRound();
+
+}
+
+function savePlayerOfRound(){
+
+const id=document.getElementById("playerOfRound").value;
+
+if(!id){
+
+data.playerOfRound="";
+save();
+return;
+
+}
+
+data.playerOfRound=id;
+
+save();
+
+alert("Jugador de la fecha guardado.");
+
+renderCurrentPlayerOfRound();
+
+}
+
+function renderCurrentPlayerOfRound(){
+
+const container=document.getElementById("currentPlayerOfRound");
+if(!container)return;
+
+const id=data.playerOfRound;
+const p=id?data.participants?.[id]:null;
+
+if(!p){
+
+container.innerHTML='<p class="muted">No hay jugador de la fecha seleccionado.</p>';
+return;
+
+}
+
+const team=data.teams?.[p.team];
+
+container.innerHTML=`
+<div class="team">
+<strong>⭐ ${escapeHtml(p.name)}</strong>
+<small>${team?escapeHtml(team.name):"Equipo por definir"}</small>
+</div>
+`;
+
+}
+
 /* FIXTURE */
 
 function generateFixture(){
@@ -1052,8 +1164,9 @@ away:teams[j].id,
 homeScore:null,
 awayScore:null,
 court:"",
+date:"",
 time:"",
-status:"Pendiente"
+status:"Programado"
 };
 }
 
@@ -1179,6 +1292,11 @@ placeholder="Cancha"
 value="${m.court||""}">
 
 <input
+id="${id}_date"
+type="date"
+value="${m.date||""}">
+
+<input
 id="${id}_time"
 placeholder="Hora"
 value="${m.time||""}">
@@ -1208,13 +1326,14 @@ const as=document.getElementById(id+"_a").value;
 m.homeScore=hs===""?null:Number(hs);
 m.awayScore=as===""?null:Number(as);
 
+m.date=document.getElementById(id+"_date").value;
 m.court=document.getElementById(id+"_court").value;
 m.time=document.getElementById(id+"_time").value;
 
 m.status=
-m.homeScore===null
-?"Pendiente"
-:"Finalizado";
+m.homeScore!==null && m.awayScore!==null
+?"Finalizado"
+:"Programado";
 
 save();
 
