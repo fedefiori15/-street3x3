@@ -735,8 +735,9 @@ html+=`
 <td>${escapeHtml(h.name)}</td>
 <td>${escapeHtml(a.name)}</td>
 <td>
-${m.homeScore===null?"-":m.homeScore+
-" - "+m.awayScore}
+${m.homeScore == null || m.awayScore == null
+?"-"
+:m.homeScore+" - "+m.awayScore}
 </td>
 </tr>
 `;
