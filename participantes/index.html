@@ -28,10 +28,11 @@ footer{border-top:1px solid var(--line);padding:25px 0;color:var(--muted);font-s
 <body>
 <header><div class="wrap"><div class="top"><div class="brand"><img src="../logo.png" alt="Street 3x3"><div><b>STREET</b> 3x3<br><span class="muted">TORNEO OFICIAL</span></div></div><div class="live">● EN VIVO</div></div>
 <nav>
-<button class="nav active" data-tab="inicio">INICIO</button><button class="nav" data-tab="fixture">FIXTURE</button><button class="nav" data-tab="resultados">RESULTADOS</button><button class="nav" data-tab="tablas">TABLAS</button><button class="nav" data-tab="playoffs">PLAYOFFS</button>
+<button class="nav active" data-tab="inicio">INICIO</button><button class="nav" data-tab="jugadores">JUGADORES</button><button class="nav" data-tab="fixture">FIXTURE</button><button class="nav" data-tab="resultados">RESULTADOS</button><button class="nav" data-tab="tablas">TABLAS</button><button class="nav" data-tab="playoffs">PLAYOFFS</button>
 </nav></div></header>
 <main class="wrap">
 <section id="inicio" class="section active hero"><div class="heroGrid"><div class="card"><div class="kicker">STREET 3x3</div><h1>TODO EL TORNEO.<br><span>EN UN SOLO LUGAR.</span></h1><p>Fixture, resultados, tablas y playoffs actualizados automáticamente. Sin registro y sin contraseña.</p><div class="muted" id="status">Conectando...</div></div><div class="card"><div class="muted">EQUIPOS INSCRIPTOS</div><div class="stat" id="teamCount">—</div><div class="muted">4 grupos · 4 equipos</div><br><div class="muted">PARTIDOS</div><div class="stat" id="matchCount">—</div></div></div></section>
+<section id="jugadores" class="section"><div class="title"><h2>Jugadores</h2><p>Estadísticas oficiales del torneo.</p></div><div id="playersContent"></div></section>
 <section id="fixture" class="section"><div class="title"><h2>Fixture</h2><p>Todos los cruces de la fase de grupos.</p></div><div id="fixtureContent"></div></section>
 <section id="resultados" class="section"><div class="title"><h2>Resultados</h2><p>Marcadores cargados por la organización.</p></div><div id="resultsContent"></div></section>
 <section id="tablas" class="section"><div class="title"><h2>Tablas</h2><p>Posiciones calculadas automáticamente.</p></div><div id="tablesContent"></div></section>
@@ -41,7 +42,7 @@ footer{border-top:1px solid var(--line);padding:25px 0;color:var(--muted);font-s
 <footer><div class="wrap"><b style="color:#fff">STREET 3x3</b> · Información oficial del torneo · Actualización en tiempo real</div></footer>
 <script>
 const config={apiKey:"AIzaSyDYfJ4qQSVqBWLBu5DziwtkWWXB4ycnSSw",authDomain:"street-3x3.firebaseapp.com",databaseURL:"https://street-3x3-default-rtdb.firebaseio.com",projectId:"street-3x3",storageBucket:"street-3x3.firebasestorage.app",messagingSenderId:"829695563143",appId:"1:829695563143:web:cccf22e2fe50f72d592f22",measurementId:"G-HYRY8Z1ZGF"};
-firebase.initializeApp(config);const ref=firebase.database().ref("tournament");let data={teams:{},matches:{},playoffs:{}};
+firebase.initializeApp(config);const ref=firebase.database().ref("tournament");let data={teams:{},matches:{},playoffs:{},participants:{}};
 const esc=x=>String(x??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");const name=id=>data.teams?.[id]?.name||"Por definir";
 function table(g){let a=Object.entries(data.teams||{}).filter(x=>x[1].group===g).map(x=>({id:x[0],name:x[1].name,pj:0,pg:0,pp:0,pf:0,pc:0,pts:0})),m={};a.forEach(x=>m[x.id]=x);Object.values(data.matches||{}).forEach(x=>{if(x.group!==g||x.homeScore==null||x.awayScore==null)return;let h=m[x.home],v=m[x.away];if(!h||!v)return;h.pj++;v.pj++;h.pf+=+x.homeScore;h.pc+=+x.awayScore;v.pf+=+x.awayScore;v.pc+=+x.homeScore;if(+x.homeScore>+x.awayScore){h.pg++;v.pp++;h.pts+=2;v.pts++}else if(+x.homeScore<+x.awayScore){v.pg++;h.pp++;v.pts+=2;h.pts++}});return a.sort((x,y)=>y.pg-x.pg||((y.pf-y.pc)-(x.pf-x.pc))||y.pf-x.pf)}
 function renderFixture(){let b=document.getElementById("fixtureContent"),arr=Object.entries(data.matches||{});if(!arr.length){b.innerHTML='<div class="empty">El fixture todavía no fue generado.</div>';return}let h="";["A","B","C","D"].forEach(g=>{let q=arr.filter(x=>x[1].group===g);if(!q.length)return;h+=`<div class="group"><h3>GRUPO ${g}</h3><div class="cards">`;q.forEach(x=>{let m=x[1];h+=`<div class="match"><div class="meta"><span>GRUPO ${g}</span><span>${esc(m.court||"Cancha por definir")}</span></div><div class="row"><span>${esc(name(m.home))}</span><span class="score">${m.homeScore==null?"—":m.homeScore}</span></div><div class="row"><span>${esc(name(m.away))}</span><span class="score">${m.awayScore==null?"—":m.awayScore}</span></div><div class="muted">${esc(m.time||"Hora por definir")}</div></div>`});h+="</div></div>"});b.innerHTML=h}
@@ -49,8 +50,82 @@ function renderResults(){let b=document.getElementById("resultsContent"),a=Objec
 function renderTables(){let b=document.getElementById("tablesContent"),h="";["A","B","C","D"].forEach(g=>{h+=`<div class="group"><h3>GRUPO ${g}</h3><div class="tableWrap"><table class="table"><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PP</th><th>PF</th><th>PC</th><th>DIF</th><th>PTS</th></tr>`;table(g).forEach((t,i)=>h+=`<tr><td class="pos">${i+1}</td><td>${esc(t.name)}</td><td>${t.pj}</td><td>${t.pg}</td><td>${t.pp}</td><td>${t.pf}</td><td>${t.pc}</td><td>${t.pf-t.pc}</td><td class="pos">${t.pts}</td></tr>`);h+="</table></div></div>"});b.innerHTML=h}
 function game(m,l){return m?`<div class="game"><div class="muted">${l}</div><div><b>${esc(name(m.home))}</b> <span style="float:right;color:var(--lime)">${m.homeScore??""}</span></div><div>${esc(name(m.away))} <span style="float:right;color:var(--lime)">${m.awayScore??""}</span></div></div>`:`<div class="game">${l}<br>Por definir</div>`}
 function renderPlayoffs(){let b=document.getElementById("playoffContent"),p=data.playoffs||{};if(!Object.keys(p).length){b.innerHTML='<div class="empty">Los playoffs todavía no fueron generados.</div>';return}b.innerHTML=`<div class="bracket"><div class="round"><h3>CUARTOS</h3>${game(p.qf1,"QF1")}${game(p.qf2,"QF2")}${game(p.qf3,"QF3")}${game(p.qf4,"QF4")}</div><div class="round"><h3>SEMIFINALES</h3><div class="game">Ganador QF1<br><br>vs<br><br>Ganador QF3</div><div class="game">Ganador QF2<br><br>vs<br><br>Ganador QF4</div></div><div class="round"><h3>FINAL</h3><div class="game">Ganador semifinal 1<br><br>vs<br><br>Ganador semifinal 2</div></div><div class="round champ"><h3>CAMPEÓN</h3><div class="game" style="text-align:center;font-size:20px">🏆<br><br>POR DEFINIR</div></div></div>`}
-function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderFixture();renderResults();renderTables();renderPlayoffs()}
-ref.on("value",s=>{let v=s.val();data=v&&typeof v==="object"&&!Array.isArray(v)?v:{teams:{},matches:{},playoffs:{}};data.teams=data.teams&&typeof data.teams==="object"?data.teams:{};data.matches=data.matches&&typeof data.matches==="object"?data.matches:{};data.playoffs=data.playoffs&&typeof data.playoffs==="object"?data.playoffs:{};render()});
+function renderPlayers(){
+
+const b=document.getElementById("playersContent");
+
+if(!b)return;
+
+const players=Object.entries(data.participants||{});
+
+if(!players.length){
+
+b.innerHTML='<div class="empty">Todavía no hay jugadores cargados.</div>';
+
+return;
+
+}
+
+players.sort((a,z)=>(Number(z[1].points)||0)-(Number(a[1].points)||0));
+
+let h=`
+<div class="tableWrap">
+<table class="table">
+<tr>
+<th>#</th>
+<th>Jugador</th>
+<th>Equipo</th>
+<th>PJ</th>
+<th>PTS</th>
+<th>PPG</th>
+<th>REB</th>
+<th>RPG</th>
+<th>AST</th>
+<th>APG</th>
+<th>MVP</th>
+</tr>
+`;
+
+players.forEach(([id,p],i)=>{
+
+const team=data.teams?.[p.team];
+const games=Number(p.games)||0;
+const points=Number(p.points)||0;
+const rebounds=Number(p.rebounds)||0;
+const assists=Number(p.assists)||0;
+const motm=Number(p.motm)||0;
+
+const ppg=games?(points/games).toFixed(1):"0.0";
+const rpg=games?(rebounds/games).toFixed(1):"0.0";
+const apg=games?(assists/games).toFixed(1):"0.0";
+
+h+=`
+<tr>
+<td class="pos">${i+1}</td>
+<td>${esc(p.name)}${p.number!==undefined&&p.number!==""?" <span class='muted'>#"+esc(p.number)+"</span>":""}</td>
+<td>${team?esc(team.name):"Por definir"}</td>
+<td>${games}</td>
+<td class="pos">${points}</td>
+<td>${ppg}</td>
+<td>${rebounds}</td>
+<td>${rpg}</td>
+<td>${assists}</td>
+<td>${apg}</td>
+<td class="pos">${motm}</td>
+</tr>
+`;
+
+});
+
+h+="</table></div>";
+
+b.innerHTML=h;
+
+}
+function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderFixture();renderResults();renderTables();renderPlayoffs()}
+ref.on("value",s=>{let v=s.val();data=v&&typeof v==="object"&&!Array.isArray(v)?v:{teams:{},matches:{},playoffs:{}};data.teams=data.teams&&typeof data.teams==="object"?data.teams:{};data.matches=data.matches&&typeof data.matches==="object"?data.matches:{};data.playoffs=data.playoffs&&typeof data.playoffs==="object"?data.playoffs:{};
+data.participants=data.participants&&typeof data.participants==="object"?data.participants:{};
+render()});
 document.querySelectorAll(".nav").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.getElementById(btn.dataset.tab).classList.add("active");scrollTo({top:0,behavior:"smooth"})});
 </script>
 </body>
