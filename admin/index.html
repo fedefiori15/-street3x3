@@ -350,7 +350,46 @@ AGREGAR EQUIPO
 </div>
 
 <div id="teamList" class="team-list"></div>
+<br>
 
+<div class="panel">
+
+<h2>Agregar participantes</h2>
+
+<div class="team-form">
+
+<input
+id="participantName"
+type="text"
+placeholder="Nombre del participante">
+
+<select id="participantTeam">
+
+<option value="">Seleccionar equipo</option>
+
+</select>
+
+<input
+id="participantNumber"
+type="number"
+placeholder="Número"
+min="0"
+max="99">
+
+<button
+class="primary"
+onclick="addParticipant()">
+AGREGAR PARTICIPANTE
+</button>
+
+</div>
+
+<div
+id="participantList"
+class="team-list">
+</div>
+
+</div>
 </div>
 
 </section>
