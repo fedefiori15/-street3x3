@@ -28,12 +28,27 @@ footer{border-top:1px solid var(--line);padding:25px 0;color:var(--muted);font-s
 <body>
 <header><div class="wrap"><div class="top"><div class="brand"><img src="../logo.png" alt="Street 3x3"><div><b>STREET</b> 3x3<br><span class="muted">TORNEO OFICIAL</span></div></div><div class="live">● EN VIVO</div></div>
 <nav>
-<button class="nav active" data-tab="inicio">INICIO</button><button class="nav" data-tab="jugadores">JUGADORES</button><button class="nav" data-tab="fixture">FIXTURE</button><button class="nav" data-tab="resultados">RESULTADOS</button><button class="nav" data-tab="tablas">TABLAS</button><button class="nav" data-tab="playoffs">PLAYOFFS</button>
+<button class="nav active" data-tab="inicio">INICIO</button><button class="nav" data-tab="jugadores">JUGADORES</button><button class="nav" data-tab="estadisticas">ESTADÍSTICAS</button><button class="nav" data-tab="fixture">FIXTURE</button><button class="nav" data-tab="resultados">RESULTADOS</button><button class="nav" data-tab="tablas">TABLAS</button><button class="nav" data-tab="playoffs">PLAYOFFS</button>
 </nav></div></header>
 <main class="wrap">
 <section id="inicio" class="section active hero"><div class="heroGrid"><div class="card"><div class="kicker">STREET 3x3</div><h1>TODO EL TORNEO.<br><span>EN UN SOLO LUGAR.</span></h1><p>Fixture, resultados, tablas y playoffs actualizados automáticamente. Sin registro y sin contraseña.</p><div class="muted" id="status">Conectando...</div></div><div class="card"><div class="muted">EQUIPOS INSCRIPTOS</div><div class="stat" id="teamCount">—</div><div class="muted">4 grupos · 4 equipos</div><br><div class="muted">PARTIDOS</div><div class="stat" id="matchCount">—</div></div></div></section>
-<section id="jugadores" class="section"><div class="title"><h2>Jugadores</h2><p>Estadísticas oficiales del torneo.</p></div><div id="playersContent"></div></section>
-<section id="fixture" class="section"><div class="title"><h2>Fixture</h2><p>Todos los cruces de la fase de grupos.</p></div><div id="fixtureContent"></div></section>
+<section id="jugadores" class="section">
+<div class="title">
+<h2>Jugadores</h2>
+<p>Todos los participantes del torneo.</p>
+</div>
+<div id="playersContent"></div>
+</section>
+
+<section id="estadisticas" class="section">
+<div class="title">
+<h2>Estadísticas</h2>
+<p>Los líderes del torneo en cada categoría.</p>
+</div>
+<div id="statsContent"></div>
+</section>
+
+<section id="fixture"<section id="fixture" class="section"><div class="title"><h2>Fixture</h2><p>Todos los cruces de la fase de grupos.</p></div><div id="fixtureContent"></div></section>
 <section id="resultados" class="section"><div class="title"><h2>Resultados</h2><p>Marcadores cargados por la organización.</p></div><div id="resultsContent"></div></section>
 <section id="tablas" class="section"><div class="title"><h2>Tablas</h2><p>Posiciones calculadas automáticamente.</p></div><div id="tablesContent"></div></section>
 <section id="playoffs" class="section"><div class="title"><h2>Playoffs</h2><p>El camino hacia el campeonato.</p></div><div id="playoffContent"></div></section>
@@ -53,76 +68,137 @@ function renderPlayoffs(){let b=document.getElementById("playoffContent"),p=data
 function renderPlayers(){
 
 const b=document.getElementById("playersContent");
-
 if(!b)return;
 
 const players=Object.entries(data.participants||{});
 
 if(!players.length){
-
 b.innerHTML='<div class="empty">Todavía no hay jugadores cargados.</div>';
-
 return;
+}
+
+const groups=["A","B","C","D"];
+let h="";
+
+groups.forEach(group=>{
+
+const groupPlayers=players
+.filter(([id,p])=>data.teams?.[p.team]?.group===group)
+.sort((a,z)=>String(a[1].name||"").localeCompare(String(z[1].name||"")));
+
+if(!groupPlayers.length)return;
+
+h+=`<div class="group"><h3>GRUPO ${group}</h3><div class="cards">`;
+
+groupPlayers.forEach(([id,p])=>{
+
+const team=data.teams?.[p.team];
+
+h+=`
+<div class="match">
+<div class="meta">
+<span>JUGADOR</span>
+<span>${p.number!==undefined&&p.number!==""?"#"+esc(p.number):""}</span>
+</div>
+<div style="font-size:20px;font-weight:900;margin-bottom:7px">
+${esc(p.name)}
+</div>
+<div class="muted">
+${team?esc(team.name):"Equipo por definir"}
+</div>
+</div>
+`;
+
+});
+
+h+="</div></div>";
+
+});
+
+b.innerHTML=h;
 
 }
 
-players.sort((a,z)=>(Number(z[1].points)||0)-(Number(a[1].points)||0));
+
+function renderStats(){
+
+const b=document.getElementById("statsContent");
+if(!b)return;
+
+const players=Object.entries(data.participants||{});
+
+if(!players.length){
+b.innerHTML='<div class="empty">Todavía no hay estadísticas cargadas.</div>';
+return;
+}
+
+function top15(metric){
+
+return [...players]
+.filter(([id,p])=>Number(p[metric])>0)
+.sort((a,z)=>(Number(z[1][metric])||0)-(Number(a[1][metric])||0))
+.slice(0,15);
+
+}
+
+function ranking(title,metric,label){
+
+const list=top15(metric);
 
 let h=`
+<div class="group">
+<h3>${title}</h3>
 <div class="tableWrap">
 <table class="table">
 <tr>
 <th>#</th>
 <th>Jugador</th>
 <th>Equipo</th>
-<th>PJ</th>
-<th>PTS</th>
-<th>PPG</th>
-<th>REB</th>
-<th>RPG</th>
-<th>AST</th>
-<th>APG</th>
-<th>MVP</th>
+<th>${label}</th>
 </tr>
 `;
 
-players.forEach(([id,p],i)=>{
+if(!list.length){
+
+h+=`<tr><td colspan="4" class="muted">Todavía no hay datos.</td></tr>`;
+
+}else{
+
+list.forEach(([id,p],i)=>{
 
 const team=data.teams?.[p.team];
-const games=Number(p.games)||0;
-const points=Number(p.points)||0;
-const rebounds=Number(p.rebounds)||0;
-const assists=Number(p.assists)||0;
-const motm=Number(p.motm)||0;
-
-const ppg=games?(points/games).toFixed(1):"0.0";
-const rpg=games?(rebounds/games).toFixed(1):"0.0";
-const apg=games?(assists/games).toFixed(1):"0.0";
 
 h+=`
 <tr>
 <td class="pos">${i+1}</td>
-<td>${esc(p.name)}${p.number!==undefined&&p.number!==""?" <span class='muted'>#"+esc(p.number)+"</span>":""}</td>
+<td>${esc(p.name)}</td>
 <td>${team?esc(team.name):"Por definir"}</td>
-<td>${games}</td>
-<td class="pos">${points}</td>
-<td>${ppg}</td>
-<td>${rebounds}</td>
-<td>${rpg}</td>
-<td>${assists}</td>
-<td>${apg}</td>
-<td class="pos">${motm}</td>
+<td class="pos">${Number(p[metric])||0}</td>
 </tr>
 `;
 
 });
 
-h+="</table></div>";
+}
 
-b.innerHTML=h;
+h+="</table></div></div>";
+
+return h;
 
 }
-function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderFixture();renderResults();renderTables();renderPlayoffs()}
+
+let htmlStats="";
+
+htmlStats+=ranking("TOP 15 — PUNTOS","points","PTS");
+htmlStats+=ranking("TOP 15 — REBOTES","rebounds","REB");
+htmlStats+=ranking("TOP 15 — ASISTENCIAS","assists","AST");
+htmlStats+=ranking("TOP 15 — MVP","motm","MVP");
+
+b.innerHTML=htmlStats;
+
+}
+
+function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs()}
 ref.on("value",s=>{let v=s.val();data=v&&typeof v==="object"&&!Array.isArray(v)?v:{teams:{},matches:{},playoffs:{}};data.teams=data.teams&&typeof data.teams==="object"?data.teams:{};data.matches=data.matches&&typeof data.matches==="object"?data.matches:{};data.playoffs=data.playoffs&&typeof data.playoffs==="object"?data.playoffs:{};
 data.participants=data.participants&&typeof data.participants==="object"?data.participants:{};
 render()});
