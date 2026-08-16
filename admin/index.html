@@ -307,6 +307,10 @@ EQUIPOS
 PARTICIPANTES
 </button>
 
+  <button class="tab" onclick="showTab('estadisticas',this)">
+ESTADÍSTICAS
+</button>
+
   <button class="tab" onclick="showTab('fixture',this)">
 FIXTURE
 </button>
@@ -405,6 +409,25 @@ class="team-list">
 </div>
 
 </section>
+
+<!-- ESTADÍSTICAS -->
+
+<section id="estadisticas" class="section">
+
+<div class="panel">
+
+<h2>Estadísticas de jugadores</h2>
+
+<p>
+Cargá las estadísticas acumuladas de cada jugador. Los datos se reflejan automáticamente en la página pública.
+</p>
+
+<div id="statsList"></div>
+
+</div>
+
+</section>
+
 <!-- FIXTURE -->
 
 <section id="fixture" class="section">
@@ -588,7 +611,8 @@ data.participants={};
 data={
 teams:{},
 matches:{},
-playoffs:{}
+playoffs:{},
+participants:{}
 };
 
 }
@@ -596,6 +620,7 @@ playoffs:{}
 renderTeams();
 updateParticipantTeams();
 renderParticipants();
+renderStats();
 renderFixture();
 renderResults();
 renderTables();
@@ -753,6 +778,7 @@ name:name,
 team:team,
 number:number,
 
+games:0,
 points:0,
 rebounds:0,
 assists:0,
@@ -864,42 +890,127 @@ const p=data.participants[id];
 
 if(!p)return;
 
+const games=prompt(
+"Partidos jugados de "+p.name,
+p.games||0
+);
+
+if(games===null)return;
+
 const points=prompt(
-"Puntos de "+p.name,
+"Puntos totales de "+p.name,
 p.points||0
 );
 
 if(points===null)return;
 
 const rebounds=prompt(
-"Rebotes de "+p.name,
+"Rebotes totales de "+p.name,
 p.rebounds||0
 );
 
 if(rebounds===null)return;
 
 const assists=prompt(
-"Asistencias de "+p.name,
+"Asistencias totales de "+p.name,
 p.assists||0
 );
 
 if(assists===null)return;
 
 const motm=prompt(
-"MOTM de "+p.name,
+"MVP / MOTM de "+p.name,
 p.motm||0
 );
 
 if(motm===null)return;
 
+p.games=Math.max(0,Math.floor(Number(games)||0));
 p.points=Math.max(0,Number(points)||0);
 p.rebounds=Math.max(0,Number(rebounds)||0);
 p.assists=Math.max(0,Number(assists)||0);
-p.motm=Math.max(0,Number(motm)||0);
+p.motm=Math.max(0,Math.floor(Number(motm)||0));
 
 save();
-
 renderParticipants();
+renderStats();
+
+}
+
+function renderStats(){
+
+const container=document.getElementById("statsList");
+
+if(!container)return;
+
+ensureParticipants();
+
+const participants=Object.entries(data.participants||{});
+
+if(!participants.length){
+
+container.innerHTML='<div class="panel">No hay jugadores cargados.</div>';
+return;
+
+}
+
+let html=`
+<div style="overflow:auto">
+<table>
+<tr>
+<th>Jugador</th>
+<th>Equipo</th>
+<th>PJ</th>
+<th>PTS</th>
+<th>REB</th>
+<th>AST</th>
+<th>MVP</th>
+<th>PPG</th>
+<th>RPG</th>
+<th>APG</th>
+<th>Acción</th>
+</tr>
+`;
+
+participants
+.sort((a,b)=>(Number(b[1].points)||0)-(Number(a[1].points)||0))
+.forEach(([id,p])=>{
+
+const team=data.teams?.[p.team];
+const games=Number(p.games)||0;
+const points=Number(p.points)||0;
+const rebounds=Number(p.rebounds)||0;
+const assists=Number(p.assists)||0;
+
+const ppg=games?(points/games).toFixed(1):"0.0";
+const rpg=games?(rebounds/games).toFixed(1):"0.0";
+const apg=games?(assists/games).toFixed(1):"0.0";
+
+html+=`
+<tr>
+<td>${escapeHtml(p.name)}</td>
+<td>${team?escapeHtml(team.name):"Equipo no encontrado"}</td>
+<td>${games}</td>
+<td>${points}</td>
+<td>${rebounds}</td>
+<td>${assists}</td>
+<td>${Number(p.motm)||0}</td>
+<td>${ppg}</td>
+<td>${rpg}</td>
+<td>${apg}</td>
+<td>
+<button class="primary" onclick="editParticipantStats('${id}')">
+EDITAR
+</button>
+</td>
+</tr>
+`;
+
+});
+
+html+="</table></div>";
+
+container.innerHTML=html;
 
 }
 
