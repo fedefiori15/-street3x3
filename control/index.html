@@ -9,9 +9,9 @@
 *{box-sizing:border-box}body{margin:0;background:var(--b);color:#fff;font-family:Arial,sans-serif}
 header{padding:15px 20px;border-bottom:2px solid var(--l);display:flex;justify-content:space-between;align-items:center;gap:10px}
 header img{width:58px;height:58px;object-fit:contain}header b{font-size:20px}
-main{max-width:1100px;margin:auto;padding:20px}.panel,.card{background:var(--p);border:1px solid var(--line);border-radius:15px;padding:18px;margin-bottom:16px}
-h1{margin:0 0 5px}h2{margin-top:0}.muted{color:var(--muted);font-size:12px}
-select,button{font:inherit}select{background:#202020;color:#fff;border:1px solid #444;border-radius:8px;padding:12px;min-width:260px}
+main{max-width:1100px;margin:auto;padding:20px}.panel{background:var(--p);border:1px solid var(--line);border-radius:15px;padding:18px;margin-bottom:16px}
+h1{margin:0 0 5px}.muted{color:var(--muted);font-size:12px}
+select,button{font:inherit}select{background:#202020;color:#fff;border:1px solid #444;border-radius:8px;padding:12px;min-width:280px}
 button{background:#222;color:#fff;border:1px solid #444;border-radius:9px;padding:12px 15px;font-weight:900;cursor:pointer}
 button:hover{border-color:var(--l);color:var(--l)}.primary{background:var(--l);color:#000;border-color:var(--l)}
 .scoreGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.scoreCard{text-align:center;background:#202020;border:1px solid var(--line);border-radius:13px;padding:18px}
@@ -21,17 +21,20 @@ button:hover{border-color:var(--l);color:var(--l)}.primary{background:var(--l);c
 .actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .status{padding:8px 10px;border-radius:99px;background:#252925;color:#fff;font-size:11px;font-weight:900;display:inline-block}
 .live{background:var(--l);color:#000}
-@media(max-width:700px){.scoreGrid{grid-template-columns:1fr}.score{font-size:76px}.clock{font-size:58px}header{align-items:flex-start}}
+@media(max-width:700px){.scoreGrid{grid-template-columns:1fr}.score{font-size:76px}.clock{font-size:58px}header{align-items:flex-start;flex-direction:column}select{width:100%;min-width:0}}
 </style>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
 </head>
 <body>
-<header><div style="display:flex;align-items:center;gap:10px"><img src="../logo.png"><b><span style="color:var(--l)">STREET</span> 3x3 · CANCHA 1</b></div><button onclick="location.href='../marcador/'">← CENTRO DE MARCADORES</button></header>
+<header>
+<div style="display:flex;align-items:center;gap:10px"><img src="../logo.png"><b><span style="color:var(--l)">STREET</span> 3x3 · CANCHA 1</b></div>
+<button onclick="location.href='../marcador/'">← CENTRO DE MARCADORES</button>
+</header>
 <main>
 <div class="panel">
 <h1>Control · Cancha 1</h1>
-<p class="muted">El partido se toma del fixture. Los equipos salen de Firebase; no hace falta escribir nombres.</p>
+<p class="muted">Elegí un partido del fixture. Los equipos salen automáticamente de los equipos inscriptos.</p>
 <div class="row" style="justify-content:flex-start">
 <select id="matchSelect"><option value="">Seleccionar partido</option></select>
 <button class="primary" onclick="loadSelectedMatch()">CARGAR PARTIDO</button>
@@ -41,16 +44,12 @@ button:hover{border-color:var(--l);color:var(--l)}.primary{background:var(--l);c
 
 <div class="scoreGrid">
 <div class="scoreCard">
-<div class="name" id="hn">LOCAL</div>
-<div class="score" id="hs">0</div>
-<div>FALTAS <span id="hf"></span></div>
+<div class="name" id="hn">LOCAL</div><div class="score" id="hs">0</div><div>FALTAS <span id="hf"></span></div>
 <div class="row"><button onclick="score('home',1)">+1</button><button onclick="score('home',2)">+2</button><button onclick="score('home',3)">+3</button></div>
 <div class="row"><button onclick="foul('home',1)">FALTA +</button><button onclick="foul('home',-1)">FALTA −</button></div>
 </div>
 <div class="scoreCard">
-<div class="name" id="an">VISITANTE</div>
-<div class="score" id="as">0</div>
-<div>FALTAS <span id="af"></span></div>
+<div class="name" id="an">VISITANTE</div><div class="score" id="as">0</div><div>FALTAS <span id="af"></span></div>
 <div class="row"><button onclick="score('away',1)">+1</button><button onclick="score('away',2)">+2</button><button onclick="score('away',3)">+3</button></div>
 <div class="row"><button onclick="foul('away',1)">FALTA +</button><button onclick="foul('away',-1)">FALTA −</button></div>
 </div>
@@ -66,56 +65,217 @@ button:hover{border-color:var(--l);color:var(--l)}.primary{background:var(--l);c
 </div>
 </div>
 </main>
+
 <script>
 const firebaseConfig={apiKey:"AIzaSyA0IEk-UXbRP3ZxAKtj8xiQZIYQH3L2roI",authDomain:"street-3x3.firebaseapp.com",databaseURL:"https://street-3x3-default-rtdb.firebaseio.com",projectId:"street-3x3",storageBucket:"street-3x3.firebasestorage.app",messagingSenderId:"829695563143",appId:"1:829695563143:web:52424caaf4ade069592f22"};
 firebase.initializeApp(firebaseConfig);
 const db=firebase.database();
 const ref=db.ref("match");
 const tournamentRef=db.ref("tournament");
+
 let data={teams:{},matches:{}};
-let state={matchId:"",home:0,away:0,homeF:0,awayF:0,homeName:"LOCAL",awayName:"VISITANTE",remaining:600,running:false,endAt:null};
+let state={matchId:"",home:0,away:0,homeF:0,awayF:0,homeName:"LOCAL",awayName:"VISITANTE",remaining:600,running:false,endAt:null,finished:false};
 
-tournamentRef.on("value",s=>{data=s.val()||{};data.teams=data.teams||{};data.matches=data.matches||{};renderMatchOptions();});
-ref.on("value",s=>{state=s.val()||state;draw();});
+tournamentRef.on("value",s=>{
+  data=s.val()||{};
+  data.teams=data.teams||{};
+  data.matches=data.matches||{};
+  renderMatchOptions();
+});
 
-function esc(x){return String(x??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));}
-function team(id){return data.teams?.[id]?.name||"Por definir";}
-function remaining(){return state.running&&state.endAt?Math.max(0,Math.ceil((state.endAt-Date.now())/1000)):Number(state.remaining)||0;}
-function dots(n){return Array.from({length:6},(_,i)=>`<span style="display:inline-block;width:13px;height:13px;border:2px solid #fff;margin:2px;background:${i<n?'var(--l)':'transparent'}"></span>`).join("");}
+ref.on("value",s=>{
+  state=s.val()||state;
+  draw();
+  renderMatchOptions();
+});
+
+function team(id){
+  return data.teams?.[id]?.name || "Por definir";
+}
+
+function remaining(){
+  return state.running&&state.endAt
+    ? Math.max(0,Math.ceil((state.endAt-Date.now())/1000))
+    : Number(state.remaining)||0;
+}
+
+function dots(n){
+  return Array.from({length:6},(_,i)=>
+    `<span style="display:inline-block;width:13px;height:13px;border:2px solid #fff;margin:2px;background:${i<n?'var(--l)':'transparent'}"></span>`
+  ).join("");
+}
+
 function draw(){
-document.getElementById("hn").textContent=state.homeName||"LOCAL";
-document.getElementById("an").textContent=state.awayName||"VISITANTE";
-document.getElementById("hs").textContent=Number(state.home)||0;
-document.getElementById("as").textContent=Number(state.away)||0;
-document.getElementById("hf").innerHTML=dots(Number(state.homeF)||0);
-document.getElementById("af").innerHTML=dots(Number(state.awayF)||0);
-let t=remaining();document.getElementById("cl").textContent=String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
-document.getElementById("cb").textContent=state.running?"PAUSAR RELOJ":"INICIAR RELOJ";
-const badge=document.getElementById("stateBadge");badge.textContent=state.running?"🟡 EN VIVO":state.matchId?"⚪ PARTIDO CARGADO":"SIN PARTIDO";badge.className="status "+(state.running?"live":"");
+  document.getElementById("hn").textContent=state.homeName||"LOCAL";
+  document.getElementById("an").textContent=state.awayName||"VISITANTE";
+  document.getElementById("hs").textContent=Number(state.home)||0;
+  document.getElementById("as").textContent=Number(state.away)||0;
+  document.getElementById("hf").innerHTML=dots(Number(state.homeF)||0);
+  document.getElementById("af").innerHTML=dots(Number(state.awayF)||0);
+
+  const t=remaining();
+  document.getElementById("cl").textContent=
+    String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
+
+  document.getElementById("cb").textContent=
+    state.running ? "PAUSAR RELOJ" : "INICIAR RELOJ";
+
+  const badge=document.getElementById("stateBadge");
+  badge.textContent=state.running?"🟡 EN VIVO":state.matchId?"⚪ PARTIDO CARGADO":"SIN PARTIDO";
+  badge.className="status "+(state.running?"live":"");
 }
+
 function renderMatchOptions(){
-const s=document.getElementById("matchSelect");if(!s)return;
-const current=state.matchId||"";
-const entries=Object.entries(data.matches||{})
-.filter(([id,m])=>String(m.court)==="1" && (m.homeScore==null||m.awayScore==null))
-.sort((a,b)=>((a[1].date||"9999-99-99")+" "+(a[1].time||"99:99")).localeCompare((b[1].date||"9999-99-99")+" "+(b[1].time||"99:99")));
-s.innerHTML='<option value="">Seleccionar partido</option>';
-entries.forEach(([id,m])=>{const o=document.createElement("option");o.value=id;o.textContent=(m.date||"Sin fecha")+" · "+(m.time||"Sin hora")+" · "+team(m.home)+" vs "+team(m.away);if(id===current)o.selected=true;s.appendChild(o);});
-const m=current?data.matches[current]:null;document.getElementById("scheduled").textContent=m?("Programado: "+(m.date||"")+" · "+(m.time||"")+" · Cancha 1"):"";
+  const s=document.getElementById("matchSelect");
+  if(!s)return;
+
+  const current=state.matchId||"";
+
+  const entries=Object.entries(data.matches||{})
+    .filter(([id,m])=>String(m.court)==="1" && m.home && m.away)
+    .sort((a,b)=>{
+      const da=(a[1].date||"9999-99-99")+" "+(a[1].time||"99:99");
+      const db=(b[1].date||"9999-99-99")+" "+(b[1].time||"99:99");
+      return da.localeCompare(db);
+    });
+
+  s.innerHTML='<option value="">Seleccionar partido</option>';
+
+  entries.forEach(([id,m])=>{
+    const o=document.createElement("option");
+    o.value=id;
+
+    const finalizado=(m.homeScore!=null && m.awayScore!=null);
+    o.textContent=
+      (m.date||"Sin fecha")+" · "+
+      (m.time||"Sin hora")+" · "+
+      team(m.home)+" vs "+team(m.away)+
+      (finalizado?" · FINALIZADO":"");
+
+    if(id===current)o.selected=true;
+    s.appendChild(o);
+  });
+
+  const m=current?data.matches[current]:null;
+  document.getElementById("scheduled").textContent=
+    m
+      ? "Programado: "+(m.date||"")+" · "+(m.time||"")+" · Cancha 1"
+      : "";
 }
+
 function loadSelectedMatch(){
-const id=document.getElementById("matchSelect").value;if(!id)return alert("Seleccioná un partido.");
-const m=data.matches[id];if(!m)return;
-if(state.matchId===id){draw();return;}
-ref.set({matchId:id,home:0,away:0,homeF:0,awayF:0,homeName:team(m.home).toUpperCase(),awayName:team(m.away).toUpperCase(),remaining:600,running:false,endAt:null,finished:false});
+  const id=document.getElementById("matchSelect").value;
+  if(!id)return alert("Seleccioná un partido.");
+
+  const m=data.matches[id];
+  if(!m)return;
+
+  if(state.matchId===id){
+    draw();
+    return;
+  }
+
+  ref.set({
+    matchId:id,
+    home:0,
+    away:0,
+    homeF:0,
+    awayF:0,
+    homeName:team(m.home).toUpperCase(),
+    awayName:team(m.away).toUpperCase(),
+    remaining:600,
+    running:false,
+    endAt:null,
+    finished:false
+  });
 }
+
 function save(x){ref.update(x);}
-function score(t,n){if(!state.matchId)return alert("Primero cargá un partido.");save({[t]:Math.max(0,(Number(state[t])||0)+n)});}
-function foul(t,n){if(!state.matchId)return alert("Primero cargá un partido.");save({[t+"F"]:Math.max(0,Math.min(6,(Number(state[t+"F"])||0)+n))});}
-function clockToggle(){if(!state.matchId)return alert("Primero cargá un partido.");let t=remaining();if(state.running)save({remaining:t,running:false,endAt:null});else if(t>0)save({remaining:t,running:true,endAt:Date.now()+t*1000});}
-function finishMatch(){if(!state.matchId)return;if(!confirm("¿Finalizar este partido?"))return;save({remaining:0,running:false,endAt:null,finished:true});}
-function resetGame(){if(!state.matchId)return;if(!confirm("¿Reiniciar el marcador de este partido?"))return;save({home:0,away:0,homeF:0,awayF:0,remaining:600,running:false,endAt:null,finished:false});}
-setInterval(()=>{draw();if(state.running&&remaining()===0)save({remaining:0,running:false,endAt:null,finished:true});},250);
+
+function score(t,n){
+  if(!state.matchId)return alert("Primero cargá un partido.");
+  save({[t]:Math.max(0,(Number(state[t])||0)+n)});
+}
+
+function foul(t,n){
+  if(!state.matchId)return alert("Primero cargá un partido.");
+  save({[t+"F"]:Math.max(0,Math.min(6,(Number(state[t+"F"])||0)+n))});
+}
+
+function clockToggle(){
+  if(!state.matchId)return alert("Primero cargá un partido.");
+  const t=remaining();
+
+  if(state.running){
+    save({remaining:t,running:false,endAt:null});
+  }else if(t>0){
+    save({remaining:t,running:true,endAt:Date.now()+t*1000});
+  }
+}
+
+function finishMatch(){
+  if(!state.matchId)return;
+  if(!confirm("¿Finalizar este partido?"))return;
+
+  const finalHome=Number(state.home)||0;
+  const finalAway=Number(state.away)||0;
+
+  save({
+    remaining:0,
+    running:false,
+    endAt:null,
+    finished:true
+  });
+
+  // También dejamos el resultado en el fixture.
+  if(state.matchId){
+    tournamentRef.child("matches").child(state.matchId).update({
+      homeScore:finalHome,
+      awayScore:finalAway,
+      finished:true
+    });
+  }
+}
+
+function resetGame(){
+  if(!state.matchId)return;
+  if(!confirm("¿Reiniciar el marcador de este partido?"))return;
+
+  save({
+    home:0,
+    away:0,
+    homeF:0,
+    awayF:0,
+    remaining:600,
+    running:false,
+    endAt:null,
+    finished:false
+  });
+}
+
+setInterval(()=>{
+  draw();
+
+  if(state.running&&remaining()===0){
+    const finalHome=Number(state.home)||0;
+    const finalAway=Number(state.away)||0;
+
+    save({
+      remaining:0,
+      running:false,
+      endAt:null,
+      finished:true
+    });
+
+    if(state.matchId){
+      tournamentRef.child("matches").child(state.matchId).update({
+        homeScore:finalHome,
+        awayScore:finalAway,
+        finished:true
+      });
+    }
+  }
+},250);
 </script>
 </body>
 </html>
