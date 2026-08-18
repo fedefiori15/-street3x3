@@ -1,0 +1,14 @@
+{
+  "name": "Street 3x3 — Torneo Oficial",
+  "short_name": "Street 3x3",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#080A08",
+  "theme_color": "#B6FF00",
+  "description": "Fixture, resultados, tablas, jugadores, estadísticas y playoffs de Street 3x3.",
+  "icons": [
+    {"src":"icon-192.png","sizes":"192x192","type":"image/png","purpose":"any maskable"},
+    {"src":"icon-512.png","sizes":"512x512","type":"image/png","purpose":"any maskable"}
+  ]
+}
