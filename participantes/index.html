@@ -169,7 +169,14 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 <footer><div class="wrap"><b style="color:#fff">STREET 3x3</b> · Información oficial del torneo · Actualización en tiempo real</div></footer>
 <script>
 const config={apiKey:"AIzaSyDYfJ4qQSVqBWLBu5DziwtkWWXB4ycnSSw",authDomain:"street-3x3.firebaseapp.com",databaseURL:"https://street-3x3-default-rtdb.firebaseio.com",projectId:"street-3x3",storageBucket:"street-3x3.firebasestorage.app",messagingSenderId:"829695563143",appId:"1:829695563143:web:cccf22e2fe50f72d592f22",measurementId:"G-HYRY8Z1ZGF"};
-firebase.initializeApp(config);const ref=firebase.database().ref("tournament");let data={teams:{},matches:{},playoffs:{},participants:{}};
+firebase.initializeApp(config);
+const db=firebase.database();
+const ref=db.ref("tournament");
+const liveRef1=db.ref("match");
+const liveRef2=db.ref("match2");
+let live1=null;
+let live2=null;
+let data={teams:{},matches:{},playoffs:{},participants:{}};
 const esc=x=>String(x??"").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;").replaceAll("'","&#039;");function name(id){
 
 if(id===undefined||id===null||id==="")return "Por definir";
@@ -494,11 +501,15 @@ b.innerHTML=`<div class="homeBlock"><div class="homeTitle"><h3>👀 JUGADOR A SE
 
 
 function liveStateValid(s){
+return !!s && !!s.matchId && s.running===true;
+}
 
-return !!s &&
-!!s.matchId &&
-s.running===true;
-
+function liveRemaining(s){
+if(!s) return 0;
+if(s.running && s.endAt){
+return Math.max(0, Math.ceil((Number(s.endAt)-Date.now())/1000));
+}
+return Math.max(0, Number(s.remaining)||0);
 }
 
 function liveMatchObject(s,court){
@@ -543,7 +554,7 @@ lives.forEach(({s,m,court})=>{
 const home=matchTeamName({home:m.home,homeName:s.homeName},"home");
 const away=matchTeamName({away:m.away,awayName:s.awayName},"away");
 
-const t=Number(s.remaining)||0;
+const t=liveRemaining(s);
 
 h+=`
 <div class="homeMatch" style="border-color:var(--lime)">
@@ -862,12 +873,30 @@ document.addEventListener("keydown",function(event){
 if(event.key==="Escape")closePlayerModal();
 });
 
-function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=TOTAL_TOURNAMENT_MATCHES;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs();renderHomePlayerOfRound();renderHomePlayerToWatch();renderNextMatches();renderRecentResults();renderGroupLeaders();renderTopStats();renderTournamentStatus();renderChampion();refreshTimeSensitiveContent()}
-ref.on("value",s=>{let v=s.val();data=v&&typeof v==="object"&&!Array.isArray(v)?v:{teams:{},matches:{},playoffs:{}};data.teams=data.teams&&typeof data.teams==="object"?data.teams:{};data.matches=data.matches&&typeof data.matches==="object"?data.matches:{};data.playoffs=data.playoffs&&typeof data.playoffs==="object"?data.playoffs:{};
+function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=TOTAL_TOURNAMENT_MATCHES;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs();renderHomePlayerOfRound();renderHomePlayerToWatch();renderLiveCenter();renderNextMatches();renderRecentResults();renderGroupLeaders();renderTopStats();renderTournamentStatus();renderChampion();refreshTimeSensitiveContent()}
+ref.on("value",s=>{
+let v=s.val();
+data=v&&typeof v==="object"&&!Array.isArray(v)?v:{teams:{},matches:{},playoffs:{}};
+data.teams=data.teams&&typeof data.teams==="object"?data.teams:{};
+data.matches=data.matches&&typeof data.matches==="object"?data.matches:{};
+data.playoffs=data.playoffs&&typeof data.playoffs==="object"?data.playoffs:{};
 data.participants=data.participants&&typeof data.participants==="object"?data.participants:{};
 data.playerOfRound=typeof data.playerOfRound==="string"?data.playerOfRound:"";
 data.playerToWatch=typeof data.playerToWatch==="string"?data.playerToWatch:"";
-render()});
+render();
+});
+
+liveRef1.on("value",s=>{
+live1=s.val();
+renderLiveCenter();
+renderTournamentStatus();
+});
+
+liveRef2.on("value",s=>{
+live2=s.val();
+renderLiveCenter();
+renderTournamentStatus();
+});
 document.querySelectorAll(".nav").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.getElementById(btn.dataset.tab).classList.add("active");scrollTo({top:0,behavior:"smooth"})});
 </script>
 
@@ -877,5 +906,5 @@ document.querySelectorAll(".nav").forEach(btn=>btn.onclick=()=>{document.querySe
 <div id="playerModalContent"></div>
 </div>
 </div>
-<script>setInterval(refreshTimeSensitiveContent,1000);refreshTimeSensitiveContent();</script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script></body>
+<script>setInterval(()=>{refreshTimeSensitiveContent();renderLiveCenter();renderTournamentStatus();},1000);refreshTimeSensitiveContent();</script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script></body>
 </html>
