@@ -1482,140 +1482,59 @@ container.innerHTML=html;
 
 /* PLAYOFFS */
 
+
+function playoffWinner(m){
+if(!m)return null;
+const h=Number(m.homeScore),a=Number(m.awayScore);
+if(!Number.isFinite(h)||!Number.isFinite(a)||h===a)return null;
+return h>a?m.home:m.away;
+}
 function generatePlayoffs(){
-
-const A=calculateTable("A");
-const B=calculateTable("B");
-const C=calculateTable("C");
-const D=calculateTable("D");
-
-if(
-A.length!==4||
-B.length!==4||
-C.length!==4||
-D.length!==4
-){
-
-alert("Cada grupo necesita 4 equipos.");
-return;
-
-}
-
+const A=calculateTable("A"),B=calculateTable("B"),C=calculateTable("C"),D=calculateTable("D");
+if(A.length!==4||B.length!==4||C.length!==4||D.length!==4){alert("Cada grupo necesita 4 equipos.");return;}
+const old=data.playoffs||{};
 data.playoffs={
-
-qf1:{home:A[0].id,away:B[1].id,homeScore:null,awayScore:null},
-qf2:{home:B[0].id,away:A[1].id,homeScore:null,awayScore:null},
-qf3:{home:C[0].id,away:D[1].id,homeScore:null,awayScore:null},
-qf4:{home:D[0].id,away:C[1].id,homeScore:null,awayScore:null}
-
-};
-
-save();
-
+qf1:{home:A[0].id,away:B[1].id,homeScore:old.qf1?.homeScore??null,awayScore:old.qf1?.awayScore??null},
+qf2:{home:B[0].id,away:A[1].id,homeScore:old.qf2?.homeScore??null,awayScore:old.qf2?.awayScore??null},
+qf3:{home:C[0].id,away:D[1].id,homeScore:old.qf3?.homeScore??null,awayScore:old.qf3?.awayScore??null},
+qf4:{home:D[0].id,away:C[1].id,homeScore:old.qf4?.homeScore??null,awayScore:old.qf4?.awayScore??null},
+sf1:{home:null,away:null,homeScore:old.sf1?.homeScore??null,awayScore:old.sf1?.awayScore??null},
+sf2:{home:null,away:null,homeScore:old.sf2?.homeScore??null,awayScore:old.sf2?.awayScore??null},
+final:{home:null,away:null,homeScore:old.final?.homeScore??null,awayScore:old.final?.awayScore??null},
+champion:null};
+updatePlayoffTeams();save();renderPlayoffs();alert("Playoffs generados correctamente.");
 }
-
-
+function updatePlayoffTeams(){
+const p=data.playoffs;if(!p)return;
+p.sf1=p.sf1||{home:null,away:null,homeScore:null,awayScore:null};
+p.sf2=p.sf2||{home:null,away:null,homeScore:null,awayScore:null};
+p.final=p.final||{home:null,away:null,homeScore:null,awayScore:null};
+p.sf1.home=playoffWinner(p.qf1);p.sf1.away=playoffWinner(p.qf3);
+p.sf2.home=playoffWinner(p.qf2);p.sf2.away=playoffWinner(p.qf4);
+p.final.home=playoffWinner(p.sf1);p.final.away=playoffWinner(p.sf2);
+p.champion=playoffWinner(p.final);
+}
+function savePlayoffResult(key){
+const p=data.playoffs?.[key];if(!p)return;
+const h=document.getElementById("po_"+key+"_h").value,a=document.getElementById("po_"+key+"_a").value;
+p.homeScore=h===""?null:Number(h);p.awayScore=a===""?null:Number(a);
+if(p.homeScore!==null&&p.awayScore!==null&&p.homeScore===p.awayScore){alert("No puede haber empate en playoffs.");return;}
+updatePlayoffTeams();save();renderPlayoffs();
+}
 function renderPlayoffs(){
-
-const container=document.getElementById("playoffBoard");
-
-if(!data.playoffs||
-!Object.keys(data.playoffs).length){
-
-container.innerHTML=
-"<p>Generá los playoffs cuando termine la fase de grupos.</p>";
-
-return;
-
+const c=document.getElementById("playoffBoard");
+if(!data.playoffs||!Object.keys(data.playoffs).length){c.innerHTML="<p>Generá los playoffs cuando termine la fase de grupos.</p>";return;}
+updatePlayoffTeams();
+const team=id=>id?escapeHtml(data.teams[id]?.name||"Por definir"):"Por definir";
+function card(m,label,key){
+if(!m)return "";
+const ready=!!m.home&&!!m.away,w=playoffWinner(m);
+return `<div class="match"><strong>${label}</strong><div style="margin:9px 0;font-weight:900">${team(m.home)}</div><div>vs</div><div style="margin:9px 0;font-weight:900">${team(m.away)}</div>
+${ready?`<div style="display:flex;gap:6px;justify-content:center"><input id="po_${key}_h" class="result" type="number" min="0" value="${m.homeScore??""}"><span>-</span><input id="po_${key}_a" class="result" type="number" min="0" value="${m.awayScore??""}"></div><button class="primary" style="margin-top:8px" onclick="savePlayoffResult('${key}')">GUARDAR</button>${w?`<div style="color:var(--lime);margin-top:7px;font-weight:900">✓ ${team(w)}</div>`:""}`:"<div style='color:#aaa;margin-top:8px'>Esperando clasificados</div>"}</div>`;
+}
+c.innerHTML=`<div class="playoff"><div class="round"><h3>CUARTOS</h3>${card(data.playoffs.qf1,"QF1","qf1")}${card(data.playoffs.qf2,"QF2","qf2")}${card(data.playoffs.qf3,"QF3","qf3")}${card(data.playoffs.qf4,"QF4","qf4")}</div><div class="round"><h3>SEMIFINALES</h3>${card(data.playoffs.sf1,"SF1","sf1")}${card(data.playoffs.sf2,"SF2","sf2")}</div><div class="round"><h3>FINAL</h3>${card(data.playoffs.final,"FINAL","final")}</div><div class="round"><h3>CAMPEÓN</h3><div class="match" style="text-align:center;font-size:20px">🏆<br><br><strong>${team(data.playoffs.champion)}</strong></div></div></div>`;
 }
 
-const names=id=>
-data.teams[id]?.name||"Por definir";
-
-let html=`
-
-<div class="playoff">
-
-<div class="round">
-
-<h3>CUARTOS</h3>
-
-${playoffMatch(data.playoffs.qf1,"QF1")}
-${playoffMatch(data.playoffs.qf2,"QF2")}
-${playoffMatch(data.playoffs.qf3,"QF3")}
-${playoffMatch(data.playoffs.qf4,"QF4")}
-
-</div>
-
-<div class="round">
-
-<h3>SEMIFINALES</h3>
-
-<div class="match">Ganador QF1<br>vs<br>Ganador QF3</div>
-
-<div class="match">Ganador QF2<br>vs<br>Ganador QF4</div>
-
-</div>
-
-<div class="round">
-
-<h3>FINAL</h3>
-
-<div class="match">
-
-Ganador semifinal 1
-
-<br><br>
-
-vs
-
-<br><br>
-
-Ganador semifinal 2
-
-</div>
-
-</div>
-
-<div class="round">
-
-<h3>CAMPEÓN</h3>
-
-<div class="match">
-
-🏆 POR DEFINIR
-
-</div>
-
-</div>
-
-</div>
-`;
-
-container.innerHTML=html;
-
-}
-
-
-function playoffMatch(m,label){
-
-if(!m)return"";
-
-return`
-<div class="match">
-
-<strong>${label}</strong>
-
-<div>${escapeHtml(data.teams[m.home]?.name||"Por definir")}</div>
-
-<div>vs</div>
-
-<div>${escapeHtml(data.teams[m.away]?.name||"Por definir")}</div>
-
-</div>
-`;
-
-}
 
 
 /* SAVE */
