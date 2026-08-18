@@ -82,6 +82,21 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 .heroGrid{gap:12px}
 }
 .qualifies{background:rgba(182,255,0,.07)}.qualifies td:first-child{border-left:3px solid var(--lime)}.filterTabs{display:flex;flex-wrap:wrap}.filterTabs .nav{font-size:11px}.championHero{text-align:center;border-color:var(--lime);background:radial-gradient(circle at 50% 0,#394500,#121512 60%)}
+
+/* DASHBOARD INICIO — distribución sin huecos */
+.homeGrid{align-items:start}
+.homeBlock.full{grid-column:auto}
+.homeBlock.championHero{grid-column:1/-1}
+.homeBlock{min-width:0}
+.homeMatch .teams span{min-width:0}
+.homeMatch .teams span:first-child,.homeMatch .teams span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tournamentProgress{height:9px;background:#252a25;border-radius:99px;overflow:hidden;margin-top:12px}
+.tournamentProgress>div{height:100%;background:var(--lime);border-radius:99px;transition:width .3s}
+.tournamentStats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:14px}
+.tournamentStat{background:#1a1e1a;border:1px solid var(--line);border-radius:11px;padding:12px;text-align:center}
+.tournamentStat b{display:block;color:var(--lime);font-size:22px;margin-bottom:3px}
+@media(max-width:850px){.homeBlock.championHero{grid-column:auto}}
+
 </style>
 </head>
 <body>
@@ -123,6 +138,7 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 <div id="groupLeadersContent"></div>
 
 <div id="topStatsContent"></div>
+<div id="tournamentStatusContent"></div>
 <div id="championContent"></div>
 
 </div>
@@ -411,6 +427,21 @@ return `<span class="statusBadge ${cls}">${icon}${s.label}</span>`;
 
 }
 
+const TOTAL_TOURNAMENT_MATCHES=31;
+const GROUP_STAGE_MATCHES=24;
+function playoffMatches(){const p=data.playoffs||{};return [p.qf1,p.qf2,p.qf3,p.qf4,p.sf1,p.sf2,p.final].filter(Boolean);}
+function isPlayoffFinished(m){return !!m&&isScoreSet(m.homeScore)&&isScoreSet(m.awayScore)&&Number(m.homeScore)!==Number(m.awayScore);}
+function renderTournamentStatus(){
+ const b=document.getElementById("tournamentStatusContent");if(!b)return;
+ const groupFinished=Object.values(data.matches||{}).filter(m=>isMatchFinished(m)).length;
+ const playoffFinished=playoffMatches().filter(isPlayoffFinished).length;
+ const finished=Math.min(TOTAL_TOURNAMENT_MATCHES,groupFinished+playoffFinished);
+ const liveCount=[liveStateValid(live1),liveStateValid(live2)].filter(Boolean).length;
+ const p=data.playoffs||{}, finalWinner=playoffWinner(p.final), champion=finalWinner||p.champion||null;
+ let phase="FASE DE GRUPOS";if(champion||finished>=TOTAL_TOURNAMENT_MATCHES)phase="TORNEO FINALIZADO";else if(groupFinished>=GROUP_STAGE_MATCHES)phase="PLAYOFFS";
+ const pct=Math.round((finished/TOTAL_TOURNAMENT_MATCHES)*100);
+ b.innerHTML=`<div class="homeBlock"><div class="homeTitle"><h3>🏆 ESTADO DEL TORNEO</h3><span>${phase}</span></div><div style="font-size:24px;font-weight:900">${finished} / ${TOTAL_TOURNAMENT_MATCHES}</div><div class="muted" style="margin-top:4px">PARTIDOS FINALIZADOS · ${pct}% COMPLETADO</div><div class="tournamentProgress"><div style="width:${pct}%"></div></div><div class="tournamentStats"><div class="tournamentStat"><b>${finished}</b><span class="muted">FINALIZADOS</span></div><div class="tournamentStat"><b>${liveCount}</b><span class="muted">EN JUEGO</span></div><div class="tournamentStat"><b>${TOTAL_TOURNAMENT_MATCHES-finished}</b><span class="muted">PENDIENTES</span></div></div><div class="muted" style="margin-top:12px">24 grupos · 4 cuartos · 2 semifinales · 1 final</div></div>`;
+}
 function renderChampion(){
 const b=document.getElementById("championContent");if(!b)return;
 const p=data.playoffs||{};
@@ -499,7 +530,7 @@ return;
 }
 
 let h=`
-<div class="homeBlock full" style="border-color:var(--lime)">
+<div class="homeBlock" style="border-color:var(--lime)">
 <div class="homeTitle">
 <h3>🟡 EN VIVO AHORA</h3>
 <span>${lives.length===2?"2 CANCHAS":"1 CANCHA"}</span>
@@ -540,117 +571,23 @@ b.innerHTML=h;
 }
 
 function renderNextMatches(){
-
-const b=document.getElementById("nextMatchesContent");
-if(!b)return;
-
-const pending=Object.values(data.matches||{})
-.filter(m=>isMatchPending(m));
-
-const live=pending
-.filter(m=>{
-const dt=getMatchDateTime(m);
-return dt && new Date().getTime()>=dt.getTime();
-})
-.sort((a,z)=>(getMatchDateTime(a)||new Date(8640000000000000))-(getMatchDateTime(z)||new Date(8640000000000000)));
-
-const upcoming=pending
-.filter(m=>{
-const dt=getMatchDateTime(m);
-return !dt || new Date().getTime()<dt.getTime();
-})
-.sort((a,z)=>{
-const da=getMatchDateTime(a),dz=getMatchDateTime(z);
-if(!da&&!dz)return 0;
-if(!da)return 1;
-if(!dz)return -1;
-return da-dz;
-})
-.slice(0,3);
-
-if(!live.length&&!upcoming.length){
-b.innerHTML="";
-return;
+ const b=document.getElementById("nextMatchesContent");
+ if(!b)return;
+ const now=Date.now();
+ const upcoming=Object.values(data.matches||{}).filter(m=>{
+   if(isMatchFinished(m))return false;
+   const dt=getMatchDateTime(m);
+   return dt && dt.getTime()>now;
+ }).sort((a,z)=>getMatchDateTime(a)-getMatchDateTime(z)).slice(0,3);
+ let h=`<div class="homeBlock"><div class="homeTitle"><h3>📅 PRÓXIMOS PARTIDOS</h3><span>AGENDA</span></div>`;
+ if(!upcoming.length){
+   h+=`<div class="empty">No hay próximos partidos con fecha y hora cargadas.</div>`;
+ }else{
+   upcoming.forEach(m=>{h+=`<div class="homeMatch"><div class="meta"><span>${m.group?"GRUPO "+esc(m.group):(m.round?esc(m.round):"TORNEO")}</span>${statusBadge(m)}</div><div class="teams"><span>${esc(matchTeamName(m,"home"))}</span><span>VS</span><span>${esc(matchTeamName(m,"away"))}</span></div><div class="muted" style="margin-top:9px">${esc(formatMatchDate(m.date))} · ${esc(m.time||"Hora por definir")}${m.court?" · CANCHA "+esc(m.court):""}</div></div>`;});
+   h+=`<a class="dashboardLink" href="#" onclick="goToTab('fixture');return false">VER FIXTURE →</a>`;
+ }
+ h+=`</div>`; b.innerHTML=h;
 }
-
-let h="";
-
-if(live.length){
-
-h+=`
-<div class="homeBlock">
-<div class="homeTitle">
-<h3>🟡 EN JUEGO AHORA</h3>
-<span>EN VIVO</span>
-</div>
-`;
-
-live.forEach(m=>{
-
-h+=`
-<div class="homeMatch">
-<div class="meta">
-<span>GRUPO ${esc(m.group||"")}</span>
-${statusBadge(m)}
-</div>
-<div class="teams">
-<span>${esc(matchTeamName(m,"home"))}</span>
-<span>VS</span>
-<span>${esc(matchTeamName(m,"away"))}</span>
-</div>
-<div class="muted" style="margin-top:9px">
-${esc(formatMatchDate(m.date))} · ${esc(m.time||"Hora por definir")}
-${m.court?" · "+esc(m.court):""}
-</div>
-</div>
-`;
-
-});
-
-h+="</div>";
-
-}
-
-if(upcoming.length){
-
-h+=`
-<div class="homeBlock" style="margin-top:18px">
-<div class="homeTitle">
-<h3>🏀 PRÓXIMOS PARTIDOS</h3>
-<span>AGENDA</span>
-</div>
-`;
-
-upcoming.forEach(m=>{
-
-h+=`
-<div class="homeMatch">
-<div class="meta">
-<span>GRUPO ${esc(m.group||"")}</span>
-${statusBadge(m)}
-</div>
-<div class="teams">
-<span>${esc(matchTeamName(m,"home"))}</span>
-<span>VS</span>
-<span>${esc(matchTeamName(m,"away"))}</span>
-</div>
-<div class="muted" style="margin-top:9px">
-${esc(formatMatchDate(m.date))} · ${esc(m.time||"Hora por definir")}
-${m.court?" · "+esc(m.court):""}
-</div>
-</div>
-`;
-
-});
-
-h+=`<a class="dashboardLink" href="#" onclick="goToTab('fixture');return false">VER FIXTURE →</a></div>`;
-
-}
-
-b.innerHTML=h;
-
-}
-
 
 function renderRecentResults(){
 
@@ -716,7 +653,7 @@ const b=document.getElementById("groupLeadersContent");
 if(!b)return;
 
 let h=`
-<div class="homeBlock full">
+<div class="homeBlock">
 <div class="homeTitle">
 <h3>🏆 LÍDERES DE GRUPO</h3>
 <span>POSICIONES</span>
@@ -777,7 +714,7 @@ const categories=[
 ];
 
 let h=`
-<div class="homeBlock full">
+<div class="homeBlock">
 <div class="homeTitle">
 <h3>📊 LÍDERES ESTADÍSTICOS</h3>
 <span>TOP 3</span>
@@ -844,7 +781,7 @@ window.scrollTo({top:0,behavior:"smooth"});
 
 function refreshTimeSensitiveContent(){
 
-renderNextMatches();
+renderLiveCenter();renderTournamentStatus();renderNextMatches();
 renderRecentResults();
 
 const now=new Date();
@@ -925,7 +862,7 @@ document.addEventListener("keydown",function(event){
 if(event.key==="Escape")closePlayerModal();
 });
 
-function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs();renderHomePlayerOfRound();renderHomePlayerToWatch();renderNextMatches();renderRecentResults();renderGroupLeaders();renderTopStats();renderChampion();refreshTimeSensitiveContent()}
+function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=TOTAL_TOURNAMENT_MATCHES;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs();renderHomePlayerOfRound();renderHomePlayerToWatch();renderNextMatches();renderRecentResults();renderGroupLeaders();renderTopStats();renderTournamentStatus();renderChampion();refreshTimeSensitiveContent()}
 ref.on("value",s=>{let v=s.val();data=v&&typeof v==="object"&&!Array.isArray(v)?v:{teams:{},matches:{},playoffs:{}};data.teams=data.teams&&typeof data.teams==="object"?data.teams:{};data.matches=data.matches&&typeof data.matches==="object"?data.matches:{};data.playoffs=data.playoffs&&typeof data.playoffs==="object"?data.playoffs:{};
 data.participants=data.participants&&typeof data.participants==="object"?data.participants:{};
 data.playerOfRound=typeof data.playerOfRound==="string"?data.playerOfRound:"";
