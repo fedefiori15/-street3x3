@@ -927,7 +927,7 @@ live2=s.val();
 renderLiveCenter();
 renderTournamentStatus();
 });
-document.querySelectorAll(".nav").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.getElementById(btn.dataset.tab).classList.add("active");scrollTo({top:0,behavior:"smooth"})});
+document.querySelectorAll(".nav[data-tab]").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));btn.classList.add("active");const target=document.getElementById(btn.dataset.tab);if(target)target.classList.add("active");scrollTo({top:0,behavior:"smooth"})});
 </script>
 
 
