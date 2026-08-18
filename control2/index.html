@@ -15,6 +15,13 @@ select,button{font:inherit}select{background:#202020;color:#fff;border:1px solid
 button{background:#222;color:#fff;border:1px solid #444;border-radius:9px;padding:12px 15px;font-weight:900;cursor:pointer}
 button:hover{border-color:var(--l);color:var(--l)}.primary{background:var(--l);color:#000;border-color:var(--l)}
 .scoreGrid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.scoreCard{text-align:center;background:#202020;border:1px solid var(--line);border-radius:13px;padding:18px}
+.foulDot{display:inline-flex;width:18px;height:18px;align-items:center;justify-content:center;margin:0 2px;font-size:18px;line-height:1;color:#666}
+.foulDot.active{color:var(--l)}
+.foulDot.bonus{border-color:#fff}
+.foulDot.possession{font-weight:1000}
+.foulLegend{margin-top:5px;font-size:10px;color:var(--muted)}
+.foulLegend b{color:#fff}
+
 .name{font-size:25px;font-weight:900}.score{font-size:92px;color:var(--l);font-weight:1000;line-height:1;margin:12px}
 .row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:10px}
 .clock{font-size:72px;font-weight:1000;text-align:center;margin:15px 0;font-variant-numeric:tabular-nums}
@@ -44,12 +51,12 @@ button:hover{border-color:var(--l);color:var(--l)}.primary{background:var(--l);c
 
 <div class="scoreGrid">
 <div class="scoreCard">
-<div class="name" id="hn">LOCAL</div><div class="score" id="hs">0</div><div>FALTAS <span id="hf"></span></div>
+<div class="name" id="hn">LOCAL</div><div class="score" id="hs">0</div><div>FALTAS <span id="hf"></span><div class="foulLegend">1–6 NORMAL · <b>7–9 BONUS</b> · <b>10 POSESIÓN</b></div></div>
 <div class="row"><button onclick="score('home',1)">+1</button><button onclick="score('home',2)">+2</button><button onclick="score('home',3)">+3</button><button onclick="score('home',-1)">−1 CORREGIR</button></div>
 <div class="row"><button onclick="foul('home',1)">FALTA +</button><button onclick="foul('home',-1)">FALTA −</button></div>
 </div>
 <div class="scoreCard">
-<div class="name" id="an">VISITANTE</div><div class="score" id="as">0</div><div>FALTAS <span id="af"></span></div>
+<div class="name" id="an">VISITANTE</div><div class="score" id="as">0</div><div>FALTAS <span id="af"></span><div class="foulLegend">1–6 NORMAL · <b>7–9 BONUS</b> · <b>10 POSESIÓN</b></div></div>
 <div class="row"><button onclick="score('away',1)">+1</button><button onclick="score('away',2)">+2</button><button onclick="score('away',3)">+3</button><button onclick="score('away',-1)">−1 CORREGIR</button></div>
 <div class="row"><button onclick="foul('away',1)">FALTA +</button><button onclick="foul('away',-1)">FALTA −</button></div>
 </div>
@@ -102,9 +109,13 @@ function remaining(){
 }
 
 function dots(n){
-  return Array.from({length:10},(_,i)=>
-    `<span style="display:inline-block;width:13px;height:13px;border:2px solid #fff;margin:2px;background:${i<n?'var(--l)':'transparent'}"></span>`
-  ).join("");
+  return Array.from({length:10},(_,i)=>{
+    const active=i<n;
+    const zone=i<6 ? "normal" : (i<9 ? "bonus" : "possession");
+    const symbol=active ? "●" : "○";
+    const cls=active ? "foulDot active "+zone : "foulDot "+zone;
+    return `<span class="${cls}" title="${i+1}ª falta">${symbol}</span>`;
+  }).join("");
 }
 
 function draw(){
