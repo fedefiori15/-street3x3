@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Street 3x3 — Torneo</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B6FF00">
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js">
 </script>
 <script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-database-compat.js"></script>
@@ -79,7 +81,8 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 .topMini{grid-template-columns:1fr}
 .heroGrid{gap:12px}
 }
-.qualifies{background:rgba(182,255,0,.07)}.qualifies td:first-child{border-left:3px solid var(--lime)}.filterTabs{display:flex;flex-wrap:wrap}.filterTabs .nav{font-size:11px}</style>
+.qualifies{background:rgba(182,255,0,.07)}.qualifies td:first-child{border-left:3px solid var(--lime)}.filterTabs{display:flex;flex-wrap:wrap}.filterTabs .nav{font-size:11px}.championHero{text-align:center;border-color:var(--lime);background:radial-gradient(circle at 50% 0,#394500,#121512 60%)}
+</style>
 </head>
 <body>
 <header><div class="wrap"><div class="top"><div class="brand"><img src="../logo.png" alt="Street 3x3"><div><b>STREET</b> 3x3<br><span class="muted">TORNEO OFICIAL</span></div></div><div class="live">● EN VIVO</div></div>
@@ -111,7 +114,8 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 <div class="homeGrid">
 
 <div id="homePlayerOfRound"></div>
-
+<div id="homePlayerToWatch"></div>
+<div id="liveCenterContent"></div>
 <div id="nextMatchesContent"></div>
 
 <div id="recentResultsContent"></div>
@@ -119,6 +123,7 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 <div id="groupLeadersContent"></div>
 
 <div id="topStatsContent"></div>
+<div id="championContent"></div>
 
 </div>
 
@@ -406,6 +411,19 @@ return `<span class="statusBadge ${cls}">${icon}${s.label}</span>`;
 
 }
 
+function renderChampion(){
+const b=document.getElementById("championContent");if(!b)return;
+const p=data.playoffs||{};
+const winner=m=>{if(!m||!isScoreSet(m.homeScore)||!isScoreSet(m.awayScore)||+m.homeScore===+m.awayScore)return null;return +m.homeScore>+m.awayScore?m.home:m.away};
+const f=p.final;const champ=p.champion||winner(f);
+if(!champ){b.innerHTML="";return;}
+const team=data.teams?.[champ];
+const matches=Object.values(data.matches||{}).filter(m=>m.home===champ||m.away===champ);
+let pj=0,pg=0,pp=0,pf=0,pc=0;
+for(const m of matches){if(!isScoreSet(m.homeScore)||!isScoreSet(m.awayScore))continue;pj++;const hs=+m.homeScore,as=+m.awayScore;if(m.home===champ){pf+=hs;pc+=as;if(hs>as)pg++;else pp++;}else{pf+=as;pc+=hs;if(as>hs)pg++;else pp++;}}
+b.innerHTML=`<div class="homeBlock full championHero"><div style="font-size:52px">🏆</div><div class="kicker">CAMPEÓN STREET 3x3</div><h2 style="font-size:38px;margin:8px 0">${team?esc(team.name):"CAMPEÓN"}</h2><div class="muted">2026</div><div style="margin-top:16px;font-weight:900">${pj} PJ · ${pg} PG · ${pp} PP · PF ${pf} · PC ${pc}</div></div>`;
+}
+
 function renderHomePlayerOfRound(){
 
 const b=document.getElementById("homePlayerOfRound");
@@ -433,6 +451,91 @@ ${Number(p.points)||0} PTS · ${Number(p.rebounds)||0} REB · ${Number(p.assists
 </div>
 </div>
 `;
+
+}
+
+function renderHomePlayerToWatch(){
+const b=document.getElementById("homePlayerToWatch");if(!b)return;
+const p=data.playerToWatch?data.participants?.[data.playerToWatch]:null;if(!p){b.innerHTML="";return;}
+const t=data.teams?.[p.team],g=+p.games||0;
+b.innerHTML=`<div class="homeBlock"><div class="homeTitle"><h3>👀 JUGADOR A SEGUIR</h3><span>ATENCIÓN</span></div><div style="font-size:24px;font-weight:900">${p.number?"#"+esc(p.number)+" ":""}${esc(p.name)}</div><div class="muted">${t?esc(t.name):"Equipo por definir"}</div><div style="margin-top:13px;font-weight:900">${g?(+p.points/g).toFixed(1):"0.0"} PPG · ${g?(+p.rebounds/g).toFixed(1):"0.0"} RPG · ${g?(+p.assists/g).toFixed(1):"0.0"} APG</div></div>`;
+}
+
+
+function liveStateValid(s){
+
+return !!s &&
+!!s.matchId &&
+s.running===true;
+
+}
+
+function liveMatchObject(s,court){
+
+if(!liveStateValid(s))return null;
+
+const m=data.matches?.[s.matchId];
+if(!m)return null;
+
+return {s:s,m:m,court:court};
+
+}
+
+function renderLiveCenter(){
+
+const b=document.getElementById("liveCenterContent");
+if(!b)return;
+
+const lives=[
+liveMatchObject(live1,"1"),
+liveMatchObject(live2,"2")
+].filter(Boolean);
+
+if(!lives.length){
+
+b.innerHTML="";
+return;
+
+}
+
+let h=`
+<div class="homeBlock full" style="border-color:var(--lime)">
+<div class="homeTitle">
+<h3>🟡 EN VIVO AHORA</h3>
+<span>${lives.length===2?"2 CANCHAS":"1 CANCHA"}</span>
+</div>
+<div class="cards">
+`;
+
+lives.forEach(({s,m,court})=>{
+
+const home=matchTeamName({home:m.home,homeName:s.homeName},"home");
+const away=matchTeamName({away:m.away,awayName:s.awayName},"away");
+
+const t=Number(s.remaining)||0;
+
+h+=`
+<div class="homeMatch" style="border-color:var(--lime)">
+<div class="meta">
+<span>CANCHA ${court}</span>
+<span class="statusBadge statusLive">🟡 EN VIVO</span>
+</div>
+<div class="teams">
+<span>${esc(home)}</span>
+<span>${Number(s.home)||0} — ${Number(s.away)||0}</span>
+<span>${esc(away)}</span>
+</div>
+<div class="muted" style="margin-top:9px">
+⏱️ ${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}
+</div>
+</div>
+`;
+
+});
+
+h+="</div></div>";
+
+b.innerHTML=h;
 
 }
 
@@ -822,10 +925,11 @@ document.addEventListener("keydown",function(event){
 if(event.key==="Escape")closePlayerModal();
 });
 
-function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs();renderHomePlayerOfRound();renderNextMatches();renderRecentResults();renderGroupLeaders();renderTopStats();refreshTimeSensitiveContent()}
+function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs();renderHomePlayerOfRound();renderHomePlayerToWatch();renderNextMatches();renderRecentResults();renderGroupLeaders();renderTopStats();renderChampion();refreshTimeSensitiveContent()}
 ref.on("value",s=>{let v=s.val();data=v&&typeof v==="object"&&!Array.isArray(v)?v:{teams:{},matches:{},playoffs:{}};data.teams=data.teams&&typeof data.teams==="object"?data.teams:{};data.matches=data.matches&&typeof data.matches==="object"?data.matches:{};data.playoffs=data.playoffs&&typeof data.playoffs==="object"?data.playoffs:{};
 data.participants=data.participants&&typeof data.participants==="object"?data.participants:{};
 data.playerOfRound=typeof data.playerOfRound==="string"?data.playerOfRound:"";
+data.playerToWatch=typeof data.playerToWatch==="string"?data.playerToWatch:"";
 render()});
 document.querySelectorAll(".nav").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.getElementById(btn.dataset.tab).classList.add("active");scrollTo({top:0,behavior:"smooth"})});
 </script>
@@ -836,5 +940,5 @@ document.querySelectorAll(".nav").forEach(btn=>btn.onclick=()=>{document.querySe
 <div id="playerModalContent"></div>
 </div>
 </div>
-<script>setInterval(refreshTimeSensitiveContent,1000);refreshTimeSensitiveContent();</script></body>
+<script>setInterval(refreshTimeSensitiveContent,1000);refreshTimeSensitiveContent();</script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script></body>
 </html>
