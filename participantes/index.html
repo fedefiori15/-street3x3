@@ -100,12 +100,29 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 .tournamentStat b{display:block;color:var(--lime);font-size:22px;margin-bottom:3px}
 @media(max-width:850px){.homeBlock.championHero{grid-column:auto}}
 
+
+/* APP — tutorial bilingüe */
+.appModal{position:fixed;inset:0;background:#000c;display:flex;align-items:center;justify-content:center;padding:18px;z-index:80}
+.appModal.hidden{display:none}
+.appBox{width:min(760px,100%);max-height:90vh;overflow:auto;background:linear-gradient(145deg,#151915,#0d100d);border:1px solid var(--lime);border-radius:18px;padding:26px;position:relative;box-shadow:0 0 45px #000}
+.appClose{position:absolute;right:14px;top:12px;width:38px;height:38px;border:1px solid #fff;background:#111511;color:#fff;border-radius:9px;font-size:24px;cursor:pointer}
+.appBox h2{margin:0 45px 5px 0;font-size:30px}
+.appSubtitle{color:var(--muted);margin-bottom:22px}
+.appGrid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.appStep{background:#1a1e1a;border:1px solid var(--line);border-radius:13px;padding:18px}
+.appStep h3{margin:0 0 10px;color:var(--lime);font-size:17px}
+.appStep p{margin:7px 0;color:#d8ddd8;line-height:1.45}
+.appStep b{color:#fff}
+.appTip{margin-top:14px;padding:14px;border:1px dashed #596059;border-radius:12px;color:#c7ccc7;line-height:1.45}
+.appTip strong{color:var(--lime)}
+@media(max-width:650px){.appGrid{grid-template-columns:1fr}.appBox{padding:21px}.appBox h2{font-size:25px}}
+
 </style>
 </head>
 <body>
 <header><div class="wrap"><div class="top"><div class="brand"><img src="../logo.png" alt="Street 3x3"><div><b>STREET</b> 3x3<br><span class="muted">TORNEO OFICIAL</span></div></div><div class="live">● EN VIVO</div></div>
 <nav>
-<button class="nav active" data-tab="inicio">INICIO</button><button class="nav" data-tab="jugadores">JUGADORES</button><button class="nav" data-tab="estadisticas">ESTADÍSTICAS</button><button class="nav" data-tab="fixture">FIXTURE</button><button class="nav" data-tab="resultados">RESULTADOS</button><button class="nav" data-tab="tablas">TABLAS</button><button class="nav" data-tab="playoffs">PLAYOFFS</button>
+<button class="nav active" data-tab="inicio">INICIO</button><button class="nav" data-tab="jugadores">JUGADORES</button><button class="nav" data-tab="estadisticas">ESTADÍSTICAS</button><button class="nav" data-tab="fixture">FIXTURE</button><button class="nav" data-tab="resultados">RESULTADOS</button><button class="nav" data-tab="tablas">TABLAS</button><button class="nav" data-tab="playoffs">PLAYOFFS</button><button class="nav" type="button" onclick="openAppModal()">📱 APP</button>
 </nav></div></header>
 <main class="wrap">
 <section id="inicio" class="section active hero">
@@ -869,7 +886,7 @@ const b=document.getElementById("tablesContent");if(!b)return;let h="";["A","B",
 }
 function playoffWinner(m){if(!m||!isScoreSet(m.homeScore)||!isScoreSet(m.awayScore)||+m.homeScore===+m.awayScore)return null;return +m.homeScore>+m.awayScore?m.home:m.away}
 function renderPlayoffs(){
-const b=document.getElementById("playoffContent");if(!b)return;const p=data.playoffs||{};if(!Object.keys(p).length){b.innerHTML='<div class="empty">Los playoffs todavía no fueron generados.</div>';return}const q1=playoffWinner(p.qf1),q2=playoffWinner(p.qf2),q3=playoffWinner(p.qf3),q4=playoffWinner(p.qf4),s1={...(p.sf1||{}),home:q1,away:q3},s2={...(p.sf2||{}),home:q2,away:q4},f={...(p.final||{}),home:playoffWinner(s1),away:playoffWinner(s2)},champ=playoffWinner(f);const tm=id=>id?esc(data.teams?.[id]?.name||"Por definir"):"Por definir";const game=(m,l)=>`<div class="game"><div class="muted">${l}</div><div><strong>${tm(m?.home)}</strong><span style="float:right;color:var(--lime)">${isScoreSet(m?.homeScore)?m.homeScore:""}</span></div><div><strong>${tm(m?.away)}</strong><span style="float:right;color:var(--lime)">${isScoreSet(m?.awayScore)?m.awayScore:""}</span></div>${playoffWinner(m)?`<div class="muted">✓ Clasifica ${tm(playoffWinner(m))}</div>`:""}</div>`;b.innerHTML=`<div class="bracket"><div class="round"><h3>CUARTOS</h3>${game(p.qf1,"QF1")}${game(p.qf2,"QF2")}${game(p.qf3,"QF3")}${game(p.qf4,"QF4")}</div><div class="round"><h3>SEMIFINALES</h3>${game(s1,"SF1")}${game(s2,"SF2")}</div><div class="round"><h3>FINAL</h3>${game(f,"FINAL")}</div><div class="round champ"><h3>CAMPEÓN</h3><div class="game" style="text-align:center;font-size:22px">🏆<br><br><strong>${champ?tm(champ):"POR DEFINIR"}</strong></div></div></div>`;
+const b=document.getElementById("playoffContent");if(!b)return;const p=data.playoffs||{};if(!Object.keys(p).length){b.innerHTML='<div class="empty">Los playoffs todavía no fueron generados.</div>';return}const q1=playoffWinner(p.qf1),q2=playoffWinner(p.qf2),q3=playoffWinner(p.qf3),q4=playoffWinner(p.qf4),s1={...(p.sf1||{}),home:q1,away:q3},s2={...(p.sf2||{}),home:q2,away:q4},f={...(p.final||{}),home:playoffWinner(s1),away:playoffWinner(s2)},champ=playoffWinner(f);const tm=id=>id?esc(data.teams?.[id]?.name||"Por definir"):"Por definir";const game=(m,l)=>`<div class="game"><div class="muted">${l}</div><div><strong>${tm(m?.home)}</strong><span style="float:right;color:var(--lime)">${isScoreSet(m?.homeScore)?m.homeScore:""}</span></div><div><strong>${tm(m?.away)}</strong><span style="float:right;color:var(--lime)">${isScoreSet(m?.awayScore)?m.awayScore:""}</span></div>${playoffWinner(m)?`<div class="muted">✓ Clasifica ${tm(playoffWinner(m))}</div>`:""}</div>`;b.innerHTML=`<div class="bracket"><div class="round"><h3>CUARTOS DE FINAL</h3>${game(p.qf1,"CUARTO 1")}${game(p.qf2,"CUARTO 2")}${game(p.qf3,"CUARTO 3")}${game(p.qf4,"CUARTO 4")}</div><div class="round"><h3>SEMIFINALES</h3>${game(s1,"SEMIFINAL 1")}${game(s2,"SEMIFINAL 2")}</div><div class="round"><h3>FINAL</h3>${game(f,"FINAL")}</div><div class="round champ"><h3>CAMPEÓN</h3><div class="game" style="text-align:center;font-size:22px">🏆<br><br><strong>${champ?tm(champ):"POR DEFINIR"}</strong></div></div></div>`;
 }
 function closePlayerModal(event){
 
@@ -913,11 +930,66 @@ renderTournamentStatus();
 document.querySelectorAll(".nav").forEach(btn=>btn.onclick=()=>{document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));document.querySelectorAll(".section").forEach(x=>x.classList.remove("active"));btn.classList.add("active");document.getElementById(btn.dataset.tab).classList.add("active");scrollTo({top:0,behavior:"smooth"})});
 </script>
 
+
+<div id="appModal" class="appModal hidden" onclick="closeAppModal(event)">
+  <div class="appBox">
+    <button class="appClose" type="button" onclick="closeAppModal()">×</button>
+    <div class="kicker">STREET 3x3</div>
+    <h2>📱 INSTALAR LA APP / INSTALL THE APP</h2>
+    <div class="appSubtitle">
+      Agregá Street 3x3 a la pantalla de inicio para acceder como una aplicación.
+      / Add Street 3x3 to your home screen to access it like an app.
+    </div>
+
+    <div class="appGrid">
+      <div class="appStep">
+        <h3>🤖 ANDROID · CHROME</h3>
+        <p><b>1.</b> Abrí Street 3x3 en Chrome.</p>
+        <p><b>2.</b> Tocá <b>⋮</b> arriba a la derecha.</p>
+        <p><b>3.</b> Elegí <b>“Agregar a pantalla de inicio”</b> / <b>“Add to Home screen”</b>, o <b>“Instalar aplicación”</b> / <b>“Install app”</b>.</p>
+        <p><b>4.</b> Tocá <b>“Agregar”</b> / <b>“Add”</b> o <b>“Instalar”</b> / <b>“Install”</b>.</p>
+      </div>
+
+      <div class="appStep">
+        <h3>🍎 IPHONE · SAFARI</h3>
+        <p><b>1.</b> Abrí Street 3x3 en Safari.</p>
+        <p><b>2.</b> Tocá <b>Compartir</b> / <b>Share</b>.</p>
+        <p><b>3.</b> Elegí <b>“Agregar a pantalla de inicio”</b> / <b>“Add to Home Screen”</b>.</p>
+        <p><b>4.</b> Tocá <b>“Agregar”</b> / <b>“Add”</b>.</p>
+      </div>
+    </div>
+
+    <div class="appTip">
+      <strong>💡 IMPORTANTE / IMPORTANT:</strong>
+      Si ya la instalaste antes, eliminá la versión anterior y volvé a instalarla
+      para que tome el nuevo ícono de Street 3x3.
+      / If you installed it before, remove the old version and install it again
+      so it uses the new Street 3x3 icon.
+    </div>
+  </div>
+</div>
+
 <div id="playerModal" class="playerModal hidden" onclick="closePlayerModal(event)">
 <div class="playerModalBox">
 <button class="playerModalClose" onclick="closePlayerModal()">×</button>
 <div id="playerModalContent"></div>
 </div>
 </div>
-<script>setInterval(()=>{refreshTimeSensitiveContent();renderLiveCenter();renderTournamentStatus();},1000);refreshTimeSensitiveContent();</script><script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script></body>
+<script>setInterval(()=>{refreshTimeSensitiveContent();renderLiveCenter();renderTournamentStatus();},1000);refreshTimeSensitiveContent();</script><script>
+
+function openAppModal(){
+  const m=document.getElementById("appModal");
+  if(m)m.classList.remove("hidden");
+}
+function closeAppModal(event){
+  const m=document.getElementById("appModal");
+  if(!m)return;
+  if(!event || event.target===m)m.classList.add("hidden");
+}
+document.addEventListener("keydown",function(event){
+  if(event.key==="Escape")closeAppModal();
+});
+
+</script>
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}</script></body>
 </html>
