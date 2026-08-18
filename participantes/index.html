@@ -807,6 +807,21 @@ function playoffWinner(m){if(!m||!isScoreSet(m.homeScore)||!isScoreSet(m.awaySco
 function renderPlayoffs(){
 const b=document.getElementById("playoffContent");if(!b)return;const p=data.playoffs||{};if(!Object.keys(p).length){b.innerHTML='<div class="empty">Los playoffs todavía no fueron generados.</div>';return}const q1=playoffWinner(p.qf1),q2=playoffWinner(p.qf2),q3=playoffWinner(p.qf3),q4=playoffWinner(p.qf4),s1={...(p.sf1||{}),home:q1,away:q3},s2={...(p.sf2||{}),home:q2,away:q4},f={...(p.final||{}),home:playoffWinner(s1),away:playoffWinner(s2)},champ=playoffWinner(f);const tm=id=>id?esc(data.teams?.[id]?.name||"Por definir"):"Por definir";const game=(m,l)=>`<div class="game"><div class="muted">${l}</div><div><strong>${tm(m?.home)}</strong><span style="float:right;color:var(--lime)">${isScoreSet(m?.homeScore)?m.homeScore:""}</span></div><div><strong>${tm(m?.away)}</strong><span style="float:right;color:var(--lime)">${isScoreSet(m?.awayScore)?m.awayScore:""}</span></div>${playoffWinner(m)?`<div class="muted">✓ Clasifica ${tm(playoffWinner(m))}</div>`:""}</div>`;b.innerHTML=`<div class="bracket"><div class="round"><h3>CUARTOS</h3>${game(p.qf1,"QF1")}${game(p.qf2,"QF2")}${game(p.qf3,"QF3")}${game(p.qf4,"QF4")}</div><div class="round"><h3>SEMIFINALES</h3>${game(s1,"SF1")}${game(s2,"SF2")}</div><div class="round"><h3>FINAL</h3>${game(f,"FINAL")}</div><div class="round champ"><h3>CAMPEÓN</h3><div class="game" style="text-align:center;font-size:22px">🏆<br><br><strong>${champ?tm(champ):"POR DEFINIR"}</strong></div></div></div>`;
 }
+function closePlayerModal(event){
+
+const modal=document.getElementById("playerModal");
+if(!modal)return;
+
+if(!event || event.target===modal){
+modal.classList.add("hidden");
+}
+
+}
+
+document.addEventListener("keydown",function(event){
+if(event.key==="Escape")closePlayerModal();
+});
+
 function render(){document.getElementById("teamCount").textContent=Object.keys(data.teams||{}).length;document.getElementById("matchCount").textContent=Object.keys(data.matches||{}).length;document.getElementById("status").textContent="● Datos actualizados en tiempo real";renderPlayers();renderStats();renderFixture();renderResults();renderTables();renderPlayoffs();renderHomePlayerOfRound();renderNextMatches();renderRecentResults();renderGroupLeaders();renderTopStats();refreshTimeSensitiveContent()}
 ref.on("value",s=>{let v=s.val();data=v&&typeof v==="object"&&!Array.isArray(v)?v:{teams:{},matches:{},playoffs:{}};data.teams=data.teams&&typeof data.teams==="object"?data.teams:{};data.matches=data.matches&&typeof data.matches==="object"?data.matches:{};data.playoffs=data.playoffs&&typeof data.playoffs==="object"?data.playoffs:{};
 data.participants=data.participants&&typeof data.participants==="object"?data.participants:{};
