@@ -60,6 +60,8 @@ button:hover{border-color:var(--l);color:var(--l)}.primary{background:var(--l);c
 <div class="clock" id="cl">10:00</div>
 <div class="actions">
 <button class="primary" id="cb" onclick="clockToggle()">INICIAR RELOJ</button>
+<button id="otBtn" onclick="startOvertime()" style="display:none">🟡 INICIAR TIEMPO EXTRA</button>
+<button id="suddenBtn" onclick="startSuddenDeath()" style="display:none">🔥 INICIAR MUERTE SÚBITA</button>
 <button onclick="finishMatch()">FINALIZAR PARTIDO</button>
 <button onclick="resetGame()">REINICIAR</button>
 </div>
@@ -74,7 +76,7 @@ const ref=db.ref("match2");
 const tournamentRef=db.ref("tournament");
 
 let data={teams:{},matches:{}};
-let state={matchId:"",home:0,away:0,homeF:0,awayF:0,homeName:"LOCAL",awayName:"VISITANTE",remaining:600,running:false,endAt:null,finished:false};
+let state={matchId:"",home:0,away:0,homeF:0,awayF:0,homeName:"LOCAL",awayName:"VISITANTE",remaining:600,running:false,endAt:null,finished:false,phase:"normal"};
 
 tournamentRef.on("value",s=>{
   data=s.val()||{};
@@ -100,7 +102,7 @@ function remaining(){
 }
 
 function dots(n){
-  return Array.from({length:6},(_,i)=>
+  return Array.from({length:10},(_,i)=>
     `<span style="display:inline-block;width:13px;height:13px;border:2px solid #fff;margin:2px;background:${i<n?'var(--l)':'transparent'}"></span>`
   ).join("");
 }
@@ -114,14 +116,46 @@ function draw(){
   document.getElementById("af").innerHTML=dots(Number(state.awayF)||0);
 
   const t=remaining();
-  document.getElementById("cl").textContent=
-    String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
+
+  if(state.phase==="sudden"){
+    document.getElementById("cl").textContent="—";
+  }else{
+    document.getElementById("cl").textContent=
+      String(Math.floor(t/60)).padStart(2,"0")+":"+String(t%60).padStart(2,"0");
+  }
 
   document.getElementById("cb").textContent=
-    state.running ? "PAUSAR RELOJ" : "INICIAR RELOJ";
+    state.running ? "PAUSAR RELOJ" :
+    state.phase==="overtime" ? "INICIAR RELOJ EXTRA" :
+    state.phase==="sudden" ? "MUERTE SÚBITA" :
+    "INICIAR RELOJ";
+
+  const otBtn=document.getElementById("otBtn");
+  const suddenBtn=document.getElementById("suddenBtn");
+  const tied=Number(state.home||0)===Number(state.away||0);
+
+  otBtn.style.display=
+    state.matchId && !state.finished &&
+    state.phase==="normal" && !state.running &&
+    Number(state.remaining)===0 && tied
+      ? "inline-block" : "none";
+
+  suddenBtn.style.display=
+    state.matchId && !state.finished &&
+    state.phase==="overtime" && !state.running &&
+    Number(state.remaining)===0 && tied
+      ? "inline-block" : "none";
 
   const badge=document.getElementById("stateBadge");
-  badge.textContent=state.running?"🟡 EN VIVO":state.matchId?"⚪ PARTIDO CARGADO":"SIN PARTIDO";
+  if(!state.matchId){
+    badge.textContent="SIN PARTIDO";
+  }else if(state.phase==="sudden"){
+    badge.textContent="🔥 MUERTE SÚBITA · PRÓXIMA CANASTA GANA";
+  }else if(state.phase==="overtime"){
+    badge.textContent=state.running?"🟡 TIEMPO EXTRA · EN VIVO":"🟡 TIEMPO EXTRA";
+  }else{
+    badge.textContent=state.running?"🟡 EN VIVO":"⚪ PARTIDO CARGADO";
+  }
   badge.className="status "+(state.running?"live":"");
 }
 
@@ -186,7 +220,8 @@ function loadSelectedMatch(){
     remaining:600,
     running:false,
     endAt:null,
-    finished:false
+    finished:false,
+    phase:"normal"
   });
 }
 
@@ -199,11 +234,13 @@ function score(t,n){
 
 function foul(t,n){
   if(!state.matchId)return alert("Primero cargá un partido.");
-  save({[t+"F"]:Math.max(0,Math.min(6,(Number(state[t+"F"])||0)+n))});
+  save({[t+"F"]:Math.max(0,Math.min(10,(Number(state[t+"F"])||0)+n))});
 }
 
 function clockToggle(){
   if(!state.matchId)return alert("Primero cargá un partido.");
+  if(state.phase==="sudden")return;
+
   const t=remaining();
 
   if(state.running){
@@ -211,6 +248,40 @@ function clockToggle(){
   }else if(t>0){
     save({remaining:t,running:true,endAt:Date.now()+t*1000});
   }
+}
+
+function startOvertime(){
+  if(!state.matchId)return;
+  if(state.phase!=="normal" || Number(state.remaining)!==0)return;
+  if(Number(state.home)!==Number(state.away)){
+    return alert("El tiempo extra solo corresponde si el partido terminó empatado.");
+  }
+
+  save({
+    phase:"overtime",
+    remaining:120,
+    running:false,
+    endAt:null,
+    finished:false,
+    phase:"normal"
+  });
+}
+
+function startSuddenDeath(){
+  if(!state.matchId)return;
+  if(state.phase!=="overtime" || Number(state.remaining)!==0)return;
+  if(Number(state.home)!==Number(state.away)){
+    return alert("No hay muerte súbita porque ya hay un ganador.");
+  }
+
+  save({
+    phase:"sudden",
+    remaining:0,
+    running:false,
+    endAt:null,
+    finished:false,
+    phase:"normal"
+  });
 }
 
 function finishMatch(){
@@ -224,7 +295,8 @@ function finishMatch(){
     remaining:0,
     running:false,
     endAt:null,
-    finished:true
+    finished:true,
+    running:false
   });
 
   // También dejamos el resultado en el fixture.
@@ -249,7 +321,8 @@ function resetGame(){
     remaining:600,
     running:false,
     endAt:null,
-    finished:false
+    finished:false,
+    phase:"normal"
   });
 }
 
@@ -257,24 +330,15 @@ setInterval(()=>{
   draw();
 
   if(state.running&&remaining()===0){
-    const finalHome=Number(state.home)||0;
-    const finalAway=Number(state.away)||0;
-
     save({
       remaining:0,
       running:false,
-      endAt:null,
-      finished:true
+      endAt:null
     });
-
-    if(state.matchId){
-      tournamentRef.child("matches").child(state.matchId).update({
-        homeScore:finalHome,
-        awayScore:finalAway,
-        finished:true
-      });
-    }
   }
+
+  // In death sudden there is no clock. The operator ends the game manually
+  // after the next basket by pressing FINALIZAR PARTIDO.
 },250);
 </script>
 </body>
