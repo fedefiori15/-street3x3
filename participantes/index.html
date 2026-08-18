@@ -51,6 +51,8 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 .homeGrid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:18px}
 .homeBlock{background:linear-gradient(145deg,#151915,#0f120f);border:1px solid var(--line);border-radius:18px;padding:22px}
 .homeBlock.full{grid-column:1/-1}
+.liveGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.livePlaceholder{background:#101310;border:1px dashed #3b413b;border-radius:12px;padding:18px;min-height:150px;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;color:var(--muted)}
 .homeTitle{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:14px}
 .homeTitle h3{margin:0;font-size:18px}
 .homeTitle span{color:var(--lime);font-size:11px;font-weight:900;letter-spacing:1px}
@@ -71,6 +73,7 @@ nav{gap:6px;padding-bottom:10px}.nav{padding:10px 12px;font-size:11px}
 .dashboardLink{display:inline-block;margin-top:13px;color:var(--lime);font-size:11px;font-weight:900;text-decoration:none}
 @media(max-width:850px){
 .homeGrid{grid-template-columns:1fr}
+.liveGrid{grid-template-columns:1fr}
 .homeBlock.full{grid-column:auto}
 .leaderGrid{grid-template-columns:1fr 1fr}
 }
@@ -528,59 +531,69 @@ function renderLiveCenter(){
 const b=document.getElementById("liveCenterContent");
 if(!b)return;
 
-const lives=[
-liveMatchObject(live1,"1"),
-liveMatchObject(live2,"2")
-].filter(Boolean);
+const liveEntries=[
+  {s:live1,court:"1"},
+  {s:live2,court:"2"}
+];
 
-if(!lives.length){
+const lives=liveEntries.map(({s,court})=>{
+  const m=liveMatchObject(s,court);
+  return m?{...m}:null;
+}).filter(Boolean);
 
-b.innerHTML="";
-return;
-
-}
+const liveCount=lives.length;
 
 let h=`
-<div class="homeBlock" style="border-color:var(--lime)">
-<div class="homeTitle">
-<h3>🟡 EN VIVO AHORA</h3>
-<span>${lives.length===2?"2 CANCHAS":"1 CANCHA"}</span>
-</div>
-<div class="cards">
+<div class="homeBlock full" style="border-color:var(--lime)">
+  <div class="homeTitle">
+    <h3>🟡 EN VIVO AHORA</h3>
+    <span>${liveCount===2?"2 CANCHAS":liveCount===1?"1 CANCHA":"SIN PARTIDOS"}</span>
+  </div>
+  <div class="liveGrid">
 `;
 
-lives.forEach(({s,m,court})=>{
+const byCourt={};
+lives.forEach(x=>byCourt[String(x.court)]=x);
 
-const home=matchTeamName({home:m.home,homeName:s.homeName},"home");
-const away=matchTeamName({away:m.away,awayName:s.awayName},"away");
+["1","2"].forEach(court=>{
+  const item=byCourt[court];
 
-const t=liveRemaining(s);
+  if(!item){
+    h+=`
+    <div class="livePlaceholder">
+      <div style="font-size:28px;margin-bottom:8px">🏀</div>
+      <strong style="color:#fff">CANCHA ${court}</strong>
+      <div style="margin-top:6px">Sin partido en juego</div>
+    </div>`;
+    return;
+  }
 
-h+=`
-<div class="homeMatch" style="border-color:var(--lime)">
-<div class="meta">
-<span>CANCHA ${court}</span>
-<span class="statusBadge statusLive">🟡 EN VIVO</span>
-</div>
-<div class="teams">
-<span>${esc(home)}</span>
-<span>${Number(s.home)||0} — ${Number(s.away)||0}</span>
-<span>${esc(away)}</span>
-</div>
-<div class="muted" style="margin-top:9px">
-⏱️ ${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}
-</div>
-</div>
-`;
+  const {s,m}=item;
+  const home=matchTeamName({home:m.home,homeName:s.homeName},"home");
+  const away=matchTeamName({away:m.away,awayName:s.awayName},"away");
+  const t=liveRemaining(s);
 
+  h+=`
+  <div class="homeMatch" style="border-color:var(--lime);margin:0;min-height:150px">
+    <div class="meta">
+      <span>CANCHA ${court}</span>
+      <span class="statusBadge statusLive">🟡 EN VIVO</span>
+    </div>
+    <div class="teams" style="font-size:16px">
+      <span>${esc(home)}</span>
+      <span style="font-size:20px!important">${Number(s.home)||0} — ${Number(s.away)||0}</span>
+      <span>${esc(away)}</span>
+    </div>
+    <div class="muted" style="margin-top:14px;text-align:center;font-size:13px">
+      ⏱️ ${String(Math.floor(t/60)).padStart(2,"0")}:${String(t%60).padStart(2,"0")}
+    </div>
+  </div>`;
 });
 
-h+="</div></div>";
-
+h+=`</div></div>`;
 b.innerHTML=h;
 
 }
-
 function renderNextMatches(){
  const b=document.getElementById("nextMatchesContent");
  if(!b)return;
