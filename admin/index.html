@@ -315,6 +315,10 @@ ESTADÍSTICAS
 JORNADA
 </button>
 
+  <button class="tab" onclick="showTab('destacados',this)">
+DESTACADOS
+</button>
+
   <button class="tab" onclick="showTab('fixture',this)">
 FIXTURE
 </button>
@@ -329,6 +333,10 @@ TABLAS
 
 <button class="tab" onclick="showTab('playoffs',this)">
 PLAYOFFS
+</button>
+
+<button class="tab" onclick="window.location.href='../marcador/'">
+MARCADORES
 </button>
 
 </div>
@@ -462,6 +470,20 @@ GUARDAR JUGADOR DE LA FECHA
 
 </section>
 
+<!-- DESTACADOS -->
+
+<section id="destacados" class="section">
+<div class="panel">
+<h2>Jugador a seguir</h2>
+<p>Seleccioná un jugador para destacarlo públicamente en Inicio.</p>
+<div class="team-form">
+<select id="playerToWatch"><option value="">Seleccionar jugador</option></select>
+<button class="primary" onclick="savePlayerToWatch()">GUARDAR JUGADOR A SEGUIR</button>
+</div>
+<div id="currentPlayerToWatch"></div>
+</div>
+</section>
+
 <!-- FIXTURE -->
 
 <section id="fixture" class="section">
@@ -470,13 +492,27 @@ GUARDAR JUGADOR DE LA FECHA
 
 <h2>Fixture</h2>
 
+<div class="team-form">
 <button class="primary" onclick="generateFixture()">
-GENERAR FIXTURE
+GENERAR 24 PARTIDOS
 </button>
 
+<button onclick="addManualMatch()">
++ AGREGAR PARTIDO
+</button>
+</div>
+
 <p>
-Esto genera los 24 partidos de la fase de grupos.
+El fixture es totalmente editable. Podés decidir libremente fecha, hora y cancha.
+Las Canchas 1 y 2 pueden jugar simultáneamente.
 </p>
+
+<div class="panel" style="background:#101210">
+<strong>Cómo organizarlo</strong>
+<p style="color:#aaa">
+Poné la misma fecha y hora en dos partidos y asignales Cancha 1 y Cancha 2 para que se jueguen a la vez.
+</p>
+</div>
 
 <div id="fixtureList"></div>
 
@@ -656,6 +692,7 @@ updateParticipantTeams();
 renderParticipants();
 renderStats();
 updatePlayerOfRoundSelect();
+updatePlayerToWatchSelect();
 renderFixture();
 renderResults();
 renderTables();
@@ -1126,38 +1163,54 @@ container.innerHTML=`
 
 }
 
+function updatePlayerToWatchSelect(){
+const select=document.getElementById("playerToWatch");
+if(!select)return;
+const current=data.playerToWatch||"";
+select.innerHTML='<option value="">Seleccionar jugador</option>';
+Object.entries(data.participants||{}).sort((a,b)=>String(a[1].name||"").localeCompare(String(b[1].name||""))).forEach(([id,p])=>{
+const o=document.createElement("option");o.value=id;o.textContent=p.name+(p.number!==undefined&&p.number!==""?" #"+p.number:"");if(id===current)o.selected=true;select.appendChild(o);
+});
+renderCurrentPlayerToWatch();
+}
+function savePlayerToWatch(){
+const id=document.getElementById("playerToWatch").value;
+data.playerToWatch=id||"";save();renderCurrentPlayerToWatch();
+}
+function renderCurrentPlayerToWatch(){
+const c=document.getElementById("currentPlayerToWatch");if(!c)return;
+const p=data.playerToWatch?data.participants?.[data.playerToWatch]:null;
+if(!p){c.innerHTML='<p class="muted">No hay jugador a seguir seleccionado.</p>';return;}
+const t=data.teams?.[p.team];c.innerHTML=`<div class="team"><strong>👀 ${escapeHtml(p.name)}</strong><small>${t?escapeHtml(t.name):"Equipo por definir"}</small></div>`;
+}
+
 /* FIXTURE */
 
 function generateFixture(){
 
-const groups=["A","B","C","D"];
+if(Object.keys(data.matches||{}).length &&
+!confirm("Esto reemplazará el fixture actual. ¿Continuar?")) return;
 
-data.matches={};
+const groups=["A","B","C","D"];
+const matches={};
 
 groups.forEach(group=>{
 
-const teams=Object.entries(data.teams)
+const teams=Object.entries(data.teams||{})
 .filter(([id,t])=>t.group===group)
 .map(([id,t])=>({id,...t}));
 
-if(teams.length!==4){
-
-alert("El Grupo "+group+
-" necesita exactamente 4 equipos.");
-
-return;
-
-}
+if(teams.length!==4) return;
 
 let counter=0;
 
 for(let i=0;i<4;i++){
-
 for(let j=i+1;j<4;j++){
 
 const id="match_"+group+"_"+counter++;
 
-data.matches[id]={
+matches[id]={
+id:id,
 group:group,
 home:teams[i].id,
 away:teams[j].id,
@@ -1166,72 +1219,229 @@ awayScore:null,
 court:"",
 date:"",
 time:"",
-status:"Programado"
+status:"Programado",
+order:Object.keys(matches).length+1
 };
-}
 
+}
 }
 
 });
 
+data.matches=matches;
 save();
-
-alert("Fixture generado correctamente.");
+alert("Fixture generado. Ahora asigná fecha, hora y cancha a cada partido.");
 
 }
 
-/* FIXTURE VIEW */
+function addManualMatch(){
+
+const id="match_"+Date.now();
+
+data.matches[id]={
+id:id,
+group:"A",
+home:"",
+away:"",
+homeScore:null,
+awayScore:null,
+court:"",
+date:"",
+time:"",
+status:"Programado",
+order:Object.keys(data.matches||{}).length+1
+};
+
+save();
+renderFixture();
+
+}
+
+function fixtureTeamOptions(selected,group){
+
+let options='<option value="">Seleccionar equipo</option>';
+
+Object.entries(data.teams||{})
+.filter(([id,t])=>!group || t.group===group)
+.sort((a,b)=>String(a[1].name||"").localeCompare(String(b[1].name||"")))
+.forEach(([id,t])=>{
+
+options+=`<option value="${id}" ${id===selected?"selected":""}>${escapeHtml(t.name)}</option>`;
+
+});
+
+return options;
+
+}
+
+function saveFixtureMatch(id){
+
+const m=data.matches[id];
+if(!m)return;
+
+m.group=document.getElementById(id+"_group").value;
+m.home=document.getElementById(id+"_home").value;
+m.away=document.getElementById(id+"_away").value;
+m.date=document.getElementById(id+"_date").value;
+m.time=document.getElementById(id+"_time").value;
+m.court=document.getElementById(id+"_court").value;
+
+if(m.home && m.away && m.home===m.away){
+alert("El local y visitante no pueden ser el mismo equipo.");
+return;
+}
+
+if(m.home && data.teams[m.home]?.group!==m.group ||
+m.away && data.teams[m.away]?.group!==m.group){
+alert("Los dos equipos deben pertenecer al grupo seleccionado.");
+return;
+}
+
+m.status=(m.homeScore!==null&&m.awayScore!==null)?"Finalizado":"Programado";
+
+save();
+renderFixture();
+renderResults();
+
+}
+
+function deleteFixtureMatch(id){
+
+if(!confirm("¿Eliminar este partido del fixture?"))return;
+
+delete data.matches[id];
+save();
+renderFixture();
+renderResults();
+
+}
+
+function moveFixtureMatch(id,direction){
+
+const entries=Object.entries(data.matches||{})
+.sort((a,b)=>(Number(a[1].order)||0)-(Number(b[1].order)||0));
+
+const index=entries.findIndex(([key])=>key===id);
+const target=index+direction;
+
+if(index<0||target<0||target>=entries.length)return;
+
+const temp=entries[index][1].order;
+entries[index][1].order=entries[target][1].order;
+entries[target][1].order=temp;
+
+save();
+renderFixture();
+
+}
 
 function renderFixture(){
 
 const container=document.getElementById("fixtureList");
+if(!container)return;
 
-if(!Object.keys(data.matches||{}).length){
+const entries=Object.entries(data.matches||{})
+.sort((a,b)=>{
 
-container.innerHTML="<p>No hay fixture generado.</p>";
+const da=(a[1].date||"9999-99-99")+" "+(a[1].time||"99:99");
+const db=(b[1].date||"9999-99-99")+" "+(b[1].time||"99:99");
+
+return da.localeCompare(db) ||
+(Number(a[1].court||99)-Number(b[1].court||99)) ||
+(Number(a[1].order||0)-Number(b[1].order||0));
+
+});
+
+if(!entries.length){
+container.innerHTML="<p>No hay partidos cargados.</p>";
 return;
-
 }
 
-let html="<table class='fixture'>";
-html+=`
-<tr>
-<th>Grupo</th>
-<th>Cancha</th>
-<th>Hora</th>
-<th>Local</th>
-<th>Visitante</th>
-<th>Resultado</th>
-</tr>
-`;
+let html="";
 
-Object.entries(data.matches).forEach(([id,m])=>{
+entries.forEach(([id,m],index)=>{
 
-const h=data.teams[m.home];
-const a=data.teams[m.away];
-
-if(!h||!a)return;
+const h=data.teams?.[m.home];
+const a=data.teams?.[m.away];
 
 html+=`
-<tr>
-<td>${m.group}</td>
-<td>${m.court||"-"}</td>
-<td>${m.time||"-"}</td>
-<td>${escapeHtml(h.name)}</td>
-<td>${escapeHtml(a.name)}</td>
-<td>
-${m.homeScore == null || m.awayScore == null
-?"-"
-:m.homeScore+" - "+m.awayScore}
-</td>
-</tr>
+<div class="panel" style="border-color:${m.court==="1"?"#B6FF00":m.court==="2"?"#6f8cff":"#333"}">
+
+<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+<strong>PARTIDO ${index+1}</strong>
+<span style="color:#aaa">${m.homeScore!==null&&m.awayScore!==null?"FINALIZADO":"PROGRAMADO"}</span>
+</div>
+
+<div class="team-form" style="margin-top:15px">
+
+<label style="display:flex;flex-direction:column;gap:5px">
+<small>Grupo</small>
+<select id="${id}_group" onchange="refreshFixtureTeams('${id}')">
+<option value="A" ${m.group==="A"?"selected":""}>A</option>
+<option value="B" ${m.group==="B"?"selected":""}>B</option>
+<option value="C" ${m.group==="C"?"selected":""}>C</option>
+<option value="D" ${m.group==="D"?"selected":""}>D</option>
+</select>
+</label>
+
+<label style="display:flex;flex-direction:column;gap:5px">
+<small>Cancha</small>
+<select id="${id}_court">
+<option value="" ${!m.court?"selected":""}>Sin asignar</option>
+<option value="1" ${m.court==="1"?"selected":""}>Cancha 1</option>
+<option value="2" ${m.court==="2"?"selected":""}>Cancha 2</option>
+</select>
+</label>
+
+<label style="display:flex;flex-direction:column;gap:5px">
+<small>Fecha</small>
+<input id="${id}_date" type="date" value="${m.date||""}">
+</label>
+
+<label style="display:flex;flex-direction:column;gap:5px">
+<small>Hora</small>
+<input id="${id}_time" type="time" value="${m.time||""}">
+</label>
+
+<label style="display:flex;flex-direction:column;gap:5px;min-width:190px">
+<small>Local</small>
+<select id="${id}_home">${fixtureTeamOptions(m.home,m.group)}</select>
+</label>
+
+<label style="display:flex;flex-direction:column;gap:5px;min-width:190px">
+<small>Visitante</small>
+<select id="${id}_away">${fixtureTeamOptions(m.away,m.group)}</select>
+</label>
+
+</div>
+
+<div style="display:flex;gap:8px;flex-wrap:wrap">
+<button class="primary" onclick="saveFixtureMatch('${id}')">GUARDAR PARTIDO</button>
+<button onclick="moveFixtureMatch('${id}',-1)">↑ SUBIR</button>
+<button onclick="moveFixtureMatch('${id}',1)">↓ BAJAR</button>
+<button class="danger" onclick="deleteFixtureMatch('${id}')">ELIMINAR</button>
+</div>
+
+${h&&a?`<div style="margin-top:12px;color:#aaa">${escapeHtml(h.name)} vs ${escapeHtml(a.name)} · ${m.date?escapeHtml(m.date):"sin fecha"} · ${m.time||"sin hora"} · ${m.court?"Cancha "+m.court:"sin cancha"}</div>`:"<div style='margin-top:12px;color:#ff7777'>Faltan equipos por asignar.</div>"}
+
+</div>
 `;
 
 });
 
-html+="</table>";
-
 container.innerHTML=html;
+
+}
+
+function refreshFixtureTeams(id){
+
+const m=data.matches[id];
+if(!m)return;
+
+const group=document.getElementById(id+"_group").value;
+
+document.getElementById(id+"_home").innerHTML=fixtureTeamOptions("",group);
+document.getElementById(id+"_away").innerHTML=fixtureTeamOptions("",group);
 
 }
 
@@ -1329,8 +1539,8 @@ const m=data.matches[id];
 const hs=document.getElementById(id+"_h").value;
 const as=document.getElementById(id+"_a").value;
 
-m.homeScore=hs===""?null:Number(hs);
-m.awayScore=as===""?null:Number(as);
+m.homeScore=hs===""||!Number.isFinite(Number(hs))?null:Number(hs);
+m.awayScore=as===""||!Number.isFinite(Number(as))?null:Number(as);
 
 m.date=document.getElementById(id+"_date").value;
 m.court=document.getElementById(id+"_court").value;
